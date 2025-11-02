@@ -18,7 +18,7 @@ const KEY_COLUMN = 'BNI_CIF_KEY'; // Kunci pencocokan
 
 // Daftar 34 kolom yang akan diambil dari Sheet2
 const COLUMNS_TO_FETCH = [
-    'BNI_CIF_KEY', 'ID_NUMBER', 'No_Rekening_Afiliasi', 'CUSTOMER_NAME', 
+    'BNI_CIF_KEY', 'ID_NUMBER', 'No_Rekening_Afiliasi', 'NAMA_DEBITUR', 
     'Product_Name5', 'GOLONGAN', 'Cycle', 'BAKI_DEBET_NEW', 'Saldo_Blokir', 
     'Total_Tunggakkan_New', 'ANGSURAN_BUNGA', 'ANGSURAN_POKOK', 'Total_Angsuran', 
     'Total_Kewajiban_New', 'SALDO_AKHIR_AFILIASI_NEW', 'program', 
