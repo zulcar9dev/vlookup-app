@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aplikasi VLOOKUP Otomatis</title>
     
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>    
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.AutoScroll.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 
     <style>
         :root {
@@ -29,7 +28,7 @@
             padding: 2.5rem 3rem;
             border-radius: 12px;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
-            max-width: 900px; /* Perlebar kontainer */
+            max-width: 1200px; /* Perlebar kontainer */
             margin: 0 auto;
             border: 1px solid #e0e0e0;
         }
@@ -39,7 +38,13 @@
         
         /* Form Styling */
         form { margin-top: 2rem; }
-        .file-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+        .file-inputs {
+            display: grid;
+            /* BARU: 3 kolom untuk 3 file */
+            grid-template-columns: 1fr 1fr 1fr; 
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
         .file-input-group label { display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--dark-text); }
         input[type="file"] { width: 100%; padding: 12px; border: 2px dashed #ddd; border-radius: 8px; background-color: #f9f9f9; cursor: pointer; transition: border-color 0.2s; }
         input[type="file"]:hover { border-color: var(--primary-color); }
@@ -51,13 +56,15 @@
         #btn-generate { background-color: var(--success-color); margin-top: 1.5rem; display: none; }
         #btn-generate:hover { background-color: #4a9d4a; }
         
-        /* BARU: Drag & Drop Area */
+        /* Drag & Drop Area */
         .drag-drop-area {
             display: grid;
-            grid-template-columns: 1fr 1fr 1.2fr; /* Tiga kolom */
+            /* BARU: 4 kolom (1fr 1fr 1fr 1.2fr) */
+            grid-template-columns: 1fr 1fr 1fr 1.2fr; 
             gap: 1.5rem;
             margin-top: 2rem;
             display: none; /* Sembunyi awalnya */
+            align-items: start; /* Pastikan kolom sejajar di atas */
         }
         .drag-list-container {
             background: #fdfdfd;
@@ -71,7 +78,7 @@
             padding-bottom: 0.5rem;
         }
         .drag-list {
-            min-height: 7000px; /* Area untuk drop (dibuat lebih panjang) */
+            min-height: 450px; 
             background: #f9f9f9;
             border-radius: 5px;
             padding: 0.5rem;
@@ -88,23 +95,6 @@
             font-weight: 500;
         }
         .list-item:active { cursor: grabbing; }
-
-/* BARU: Style untuk input pencarian */
-        .search-input {
-            width: 100%;
-            padding: 0.5rem 0.75rem;
-            margin-bottom: 0.75rem;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            box-sizing: border-box; /* Penting agar padding tidak merusak layout */
-        }
-        .search-input:focus {
-            border-color: var(--primary-color);
-            outline: none;
-            box-shadow: 0 0 0 2px rgba(0,123,255,0.2);
-        }
-        
-        /* Style untuk target drop */
         .target-list {
             border-color: var(--primary-color);
             background: #f4f9ff;
@@ -113,16 +103,23 @@
             background: #e6f2ff;
             border-color: var(--primary-color);
         }
-        
-        /* Class dari SortableJS */
-        .sortable-ghost {
-            opacity: 0.4;
-            background: #cce4ff;
-        }
-        .sortable-chosen {
-            background: #aed6ff;
-        }
+        .sortable-ghost { opacity: 0.4; background: #cce4ff; }
+        .sortable-chosen { background: #aed6ff; }
 
+        /* Style untuk input pencarian */
+        .search-input {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            margin-bottom: 0.75rem;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        .search-input:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.2);
+        }
 
         /* Status & Loading */
         .status-container { margin-top: 1.5rem; text-align: center; }
@@ -139,19 +136,23 @@
     <div class="container">
         <h1>VLOOKUP Otomatis 🚀</h1>
         <p>
-            Unggah dua file, seret kolom yang diinginkan untuk diurutkan, dan gabungkan datanya.
+            Unggah file Anda, seret kolom yang diinginkan untuk diurutkan, dan gabungkan datanya.
             Kunci pencocokan: <strong>'BNI_CIF_KEY'</strong>.
         </p>
         
         <form id="upload-form">
             <div class="file-inputs">
                 <div class="file-input-group">
-                    <label for="fileMain">1. File Utama (Data yang akan ditambahi)</label>
+                    <label for="fileMain">1. File Utama</label>
                     <input type="file" id="fileMain" name="fileMain" accept=".xlsx, .xls">
                 </div>
                 <div class="file-input-group">
-                    <label for="fileLookup">2. File Referensi (Data pencarian)</label>
-                    <input type="file" id="fileLookup" name="fileLookup" accept=".xlsx, .xls">
+                    <label for="fileLookupA">2. File Referensi A</label>
+                    <input type="file" id="fileLookupA" name="fileLookupA" accept=".xlsx, .xls">
+                </div>
+                <div class="file-input-group">
+                    <label for="fileLookupB">3. File Referensi B</label>
+                    <input type="file" id="fileLookupB" name="fileLookupB" accept=".xlsx, .xls">
                 </div>
             </div>
             
@@ -171,19 +172,21 @@
         <div class="drag-drop-area" id="drag-drop-area">
             <div class="drag-list-container">
                 <h3>Kolom File Utama</h3>
-                <div id="main-cols-list" class="drag-list">
-                    </div>
+                <div id="main-cols-list" class="drag-list"></div>
             </div>
             <div class="drag-list-container">
-                <h3>Kolom File Referensi</h3>
-                <input type="search" id="search-lookup-cols" class="search-input" placeholder="Cari kolom...">
-                <div id="lookup-cols-list" class="drag-list">
-                    </div>
+                <h3>Kolom Referensi A</h3>
+                <input type="search" id="search-lookup-A" class="search-input" placeholder="Cari kolom...">
+                <div id="lookup-A-cols-list" class="drag-list"></div>
+            </div>
+            <div class="drag-list-container">
+                <h3>Kolom Referensi B</h3>
+                <input type="search" id="search-lookup-B" class="search-input" placeholder="Cari kolom...">
+                <div id="lookup-B-cols-list" class="drag-list"></div>
             </div>
             <div class="drag-list-container target-list">
                 <h3>Kolom Hasil (Seret & Urutkan)</h3>
-                <div id="result-cols-list" class="drag-list target-list">
-                    </div>
+                <div id="result-cols-list" class="drag-list target-list"></div>
             </div>
         </div>
 
@@ -194,7 +197,8 @@
         // Ambil elemen-elemen
         const form = document.getElementById('upload-form');
         const fileMainInput = document.getElementById('fileMain');
-        const fileLookupInput = document.getElementById('fileLookup');
+        const fileLookupAInput = document.getElementById('fileLookupA');
+        const fileLookupBInput = document.getElementById('fileLookupB'); // BARU
         
         const btnInspect = document.getElementById('btn-inspect');
         const btnGenerate = document.getElementById('btn-generate');
@@ -202,30 +206,35 @@
         const loadingContainer = document.getElementById('loading-container');
         const errorDiv = document.getElementById('error-message');
         
-        // Elemen baru
         const dragDropArea = document.getElementById('drag-drop-area');
         const mainColsList = document.getElementById('main-cols-list');
-        const lookupColsList = document.getElementById('lookup-cols-list');
+        const lookupAColsList = document.getElementById('lookup-A-cols-list');
+        const lookupBColsList = document.getElementById('lookup-B-cols-list'); // BARU
         const resultColsList = document.getElementById('result-cols-list');
-        const searchLookupInput = document.getElementById('search-lookup-cols');
+
+        const searchLookupAInput = document.getElementById('search-lookup-A');
+        const searchLookupBInput = document.getElementById('search-lookup-B'); // BARU
 
         // Variabel untuk menyimpan nama file sementara
         let tempFileMainName = '';
-        let tempFileLookupName = '';
+        let tempFileLookupAName = '';
+        let tempFileLookupBName = ''; // BARU
 
         // --- TAHAP 1: Inspeksi File (Baca Kolom) ---
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
             
-            if (fileMainInput.files.length === 0 || fileLookupInput.files.length === 0) {
-                showError('Harap pilih kedua file.');
+            // BARU: Validasi 3 file
+            if (fileMainInput.files.length === 0 || fileLookupAInput.files.length === 0 || fileLookupBInput.files.length === 0) {
+                showError('Harap pilih ketiga file.');
                 return;
             }
 
             showLoading(true);
             const formData = new FormData();
             formData.append('fileMain', fileMainInput.files[0]);
-            formData.append('fileLookup', fileLookupInput.files[0]);
+            formData.append('fileLookupA', fileLookupAInput.files[0]);
+            formData.append('fileLookupB', fileLookupBInput.files[0]); // BARU
 
             try {
                 const response = await fetch('/inspect-files', {
@@ -240,17 +249,19 @@
 
                 const data = await response.json();
                 
+                // BARU: Simpan 3 nama file
                 tempFileMainName = data.fileMainName;
-                tempFileLookupName = data.fileLookupName;
+                tempFileLookupAName = data.fileLookupAName;
+                tempFileLookupBName = data.fileLookupBName;
 
                 // Tampilkan daftar kolom
                 populateColumnList(mainColsList, data.mainHeaders, 'main');
-                populateColumnList(lookupColsList, data.lookupHeaders, 'lookup');
+                populateColumnList(lookupAColsList, data.lookupAHeaders, 'lookupA');
+                populateColumnList(lookupBColsList, data.lookupBHeaders, 'lookupB'); // BARU
                 
                 // Inisialisasi SortableJS
                 initDragAndDrop();
 
-                // Tampilkan area drag/drop dan tombol generate
                 dragDropArea.style.display = 'grid';
                 btnGenerate.style.display = 'block';
                 btnInspect.disabled = true;
@@ -265,8 +276,6 @@
         // --- TAHAP 2: Generate Laporan (VLOOKUP) ---
         btnGenerate.addEventListener('click', async () => {
             showLoading(true, "Menggabungkan data...");
-
-            // Kumpulkan kolom yang dipilih dari area hasil
             const orderedColumns = getSelectedColumns();
 
             if (orderedColumns.length === 0) {
@@ -274,8 +283,6 @@
                 showLoading(false);
                 return;
             }
-
-            // Validasi: Pastikan Kunci VLOOKUP ada di dalam daftar hasil
             const hasMainKey = orderedColumns.some(col => col.source === 'main' && col.column === 'BNI_CIF_KEY');
             if (!hasMainKey) {
                 showError("Kolom 'BNI_CIF_KEY' dari File Utama wajib ada di 'Kolom Hasil'.");
@@ -289,8 +296,9 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         fileMainName: tempFileMainName,
-                        fileLookupName: tempFileLookupName,
-                        orderedColumns: orderedColumns // Kirim array objek terurut
+                        fileLookupAName: tempFileLookupAName,
+                        fileLookupBName: tempFileLookupBName, // BARU
+                        orderedColumns: orderedColumns 
                     })
                 });
 
@@ -299,7 +307,6 @@
                     throw new Error(errorData.error);
                 }
                 
-                // Jika sukses (respons adalah file Excel)
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -310,8 +317,6 @@
                 a.click();
                 window.URL.revokeObjectURL(url);
                 a.remove();
-
-                // Reset aplikasi
                 resetApp();
 
             } catch (err) {
@@ -321,45 +326,36 @@
             }
         });
 
-// --- BARU: Event Listener untuk Pencarian Kolom Referensi ---
-    searchLookupInput.addEventListener('input', () => {
-        const searchTerm = searchLookupInput.value.toLowerCase();
-
-        // Ambil semua item di *dalam* daftar referensi
-        const items = lookupColsList.querySelectorAll('.list-item'); 
-
-        items.forEach(item => {
-            const itemText = item.textContent.toLowerCase();
-            if (itemText.includes(searchTerm)) {
-                item.style.display = 'block'; // Tampilkan jika cocok
-            } else {
-                item.style.display = 'none'; // Sembunyikan jika tidak cocok
-            }
+        // --- Event Listener untuk Pencarian Kolom ---
+        searchLookupAInput.addEventListener('input', () => {
+            filterList(lookupAColsList, searchLookupAInput.value);
         });
-    });
+        
+        searchLookupBInput.addEventListener('input', () => { // BARU
+            filterList(lookupBColsList, searchLookupBInput.value);
+        });
+        
+        function filterList(listElement, searchTerm) {
+            const normalizedSearch = searchTerm.toLowerCase();
+            const items = listElement.querySelectorAll('.list-item');
+            items.forEach(item => {
+                const itemText = item.textContent.toLowerCase();
+                item.style.display = itemText.includes(normalizedSearch) ? 'block' : 'none';
+            });
+        }
 
         // --- Helper Functions ---
-
         function populateColumnList(listElement, headers, source) {
-            listElement.innerHTML = ''; // Hapus isi lama
-            
+            listElement.innerHTML = ''; 
             headers.forEach(header => {
                 const item = document.createElement('div');
                 item.className = 'list-item';
-                // Gunakan data-attributes untuk menyimpan info sumber dan nama kolom
                 item.dataset.source = source;
                 item.dataset.column = header;
                 item.textContent = header;
                 
-                // Otomatis masukkan BNI_CIF_KEY ke kotak hasil
-                if (header === 'BNI_CIF_KEY') {
-                    if (source === 'main') {
-                        // Kunci utama langsung ke kotak hasil
-                        resultColsList.appendChild(item);
-                    } else {
-                        // Kunci referensi tetap di daftarnya (opsional)
-                        listElement.appendChild(item);
-                    }
+                if (header === 'BNI_CIF_KEY' && source === 'main') {
+                    resultColsList.appendChild(item);
                 } else {
                     listElement.appendChild(item);
                 }
@@ -367,35 +363,30 @@
         }
 
         function initDragAndDrop() {
+            // Hapus baris 'Sortable.mount' jika ada
             
-            // Opsi bersama untuk semua daftar
             const sortableOptions = {
                 group: 'shared',
                 animation: 150,
                 ghostClass: 'sortable-ghost',
-                
-                // BARU: Aktifkan auto-scroll untuk jendela browser
                 scroll: true, 
-                scrollSensitivity: 50, // Jarak (px) dari tepi layar untuk memicu scroll
-                scrollSpeed: 15       // Kecepatan scroll
+                scrollSensitivity: 50,
+                scrollSpeed: 15
             };
 
-            // Inisialisasi untuk 3 daftar dengan opsi yang sama
+            // BARU: Inisialisasi 4 daftar
             new Sortable(mainColsList, sortableOptions);
-            new Sortable(lookupColsList, sortableOptions);
+            new Sortable(lookupAColsList, sortableOptions);
+            new Sortable(lookupBColsList, sortableOptions); // BARU
             new Sortable(resultColsList, sortableOptions);
         }
 
         function getSelectedColumns() {
-            // Ambil semua item dari daftar hasil, SESUAI URUTAN
             const items = resultColsList.querySelectorAll('.list-item');
-            return Array.from(items).map(item => {
-                // Kembalikan objek dengan info dari data-attributes
-                return {
-                    source: item.dataset.source,
-                    column: item.dataset.column
-                };
-            });
+            return Array.from(items).map(item => ({
+                source: item.dataset.source,
+                column: item.dataset.column
+            }));
         }
 
         function showLoading(isLoading, message = "Memproses file, mohon tunggu... ⏳") {
@@ -410,17 +401,20 @@
         }
         
         function resetApp() {
-        form.reset();
-        dragDropArea.style.display = 'none';
-        btnGenerate.style.display = 'none';
-        btnInspect.disabled = false;
-        tempFileMainName = '';
-        tempFileLookupName = '';
-        mainColsList.innerHTML = '';
-        lookupColsList.innerHTML = '';
-        resultColsList.innerHTML = '';
-        searchLookupInput.value = ''; // <-- BARIS BARU
-    }
+            form.reset();
+            dragDropArea.style.display = 'none';
+            btnGenerate.style.display = 'none';
+            btnInspect.disabled = false;
+            tempFileMainName = '';
+            tempFileLookupAName = '';
+            tempFileLookupBName = ''; // BARU
+            mainColsList.innerHTML = '';
+            lookupAColsList.innerHTML = '';
+            lookupBColsList.innerHTML = ''; // BARU
+            resultColsList.innerHTML = '';
+            searchLookupAInput.value = ''; // BARU
+            searchLookupBInput.value = ''; // BARU
+        }
 
     </script>
 </body>

@@ -1,4 +1,4 @@
-// 1. Impor Pustaka (Library)
+// 1. Impor Pustaka
 const express = require('express');
 const multer = require('multer');
 const xlsx = require('xlsx');
@@ -24,6 +24,7 @@ const storage = multer.diskStorage({
         cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
     }
 });
+// BARU: Terima 3 file
 const upload = multer({ storage: storage });
 
 // Helper function untuk membaca header
@@ -35,10 +36,7 @@ function getHeaders(filePath) {
         if (!worksheet) return [];
         
         const data = xlsx.utils.sheet_to_json(worksheet, { header: 1, range: 0 });
-        if (data.length > 0) {
-            return data[0];
-        }
-        return [];
+        return (data.length > 0) ? data[0] : [];
     } catch (e) {
         console.error("Gagal membaca header:", e);
         return [];
@@ -54,72 +52,86 @@ app.get('/', (req, res) => {
 
 /**
  * ENDPOINT 1: INSPEKSI FILE
- * (Tidak ada perubahan dari sebelumnya)
+ * BARU: Menangani 3 file
  */
 app.post('/inspect-files', upload.fields([
     { name: 'fileMain', maxCount: 1 },
-    { name: 'fileLookup', maxCount: 1 }
+    { name: 'fileLookupA', maxCount: 1 },
+    { name: 'fileLookupB', maxCount: 1 }
 ]), (req, res) => {
     
-    if (!req.files || !req.files.fileMain || !req.files.fileLookup) {
-        return res.status(400).json({ error: 'Harap unggah kedua file.' });
+    // BARU: Validasi 3 file
+    if (!req.files || !req.files.fileMain || !req.files.fileLookupA || !req.files.fileLookupB) {
+        return res.status(400).json({ error: 'Harap unggah ketiga file.' });
     }
 
     const fileMainPath = req.files.fileMain[0].path;
-    const fileLookupPath = req.files.fileLookup[0].path;
+    const fileLookupAPath = req.files.fileLookupA[0].path;
+    const fileLookupBPath = req.files.fileLookupB[0].path;
 
     const mainHeaders = getHeaders(fileMainPath);
-    const lookupHeaders = getHeaders(fileLookupPath);
+    const lookupAHeaders = getHeaders(fileLookupAPath);
+    const lookupBHeaders = getHeaders(fileLookupBPath);
 
-    if (mainHeaders.length === 0 || lookupHeaders.length === 0) {
+    if (mainHeaders.length === 0 || lookupAHeaders.length === 0 || lookupBHeaders.length === 0) {
         fs.unlinkSync(fileMainPath);
-        fs.unlinkSync(fileLookupPath);
-        return res.status(400).json({ error: 'Gagal membaca header dari file. Pastikan file tidak kosong.' });
+        fs.unlinkSync(fileLookupAPath);
+        fs.unlinkSync(fileLookupBPath);
+        return res.status(400).json({ error: 'Gagal membaca header dari satu atau lebih file.' });
     }
 
+    // BARU: Kembalikan 3 set header dan 3 nama file
     res.json({
         mainHeaders: mainHeaders,
-        lookupHeaders: lookupHeaders,
+        lookupAHeaders: lookupAHeaders,
+        lookupBHeaders: lookupBHeaders,
         fileMainName: req.files.fileMain[0].filename, 
-        fileLookupName: req.files.fileLookup[0].filename 
+        fileLookupAName: req.files.fileLookupA[0].filename,
+        fileLookupBName: req.files.fileLookupB[0].filename 
     });
 });
 
 /**
  * ENDPOINT 2: PROSES VLOOKUP & GENERATE
- * !!! PERUBAHAN UTAMA DI SINI !!!
- * Menerima 'orderedColumns' sebagai array objek.
+ * BARU: Menangani 3 file
  */
 app.post('/generate-report', async (req, res) => {
-    // Ambil data dari body, 'orderedColumns' adalah yang baru
-    const { fileMainName, fileLookupName, orderedColumns } = req.body;
+    // BARU: Ambil 3 nama file
+    const { fileMainName, fileLookupAName, fileLookupBName, orderedColumns } = req.body;
 
-    if (!fileMainName || !fileLookupName || !orderedColumns || orderedColumns.length === 0) {
+    if (!fileMainName || !fileLookupAName || !fileLookupBName || !orderedColumns || orderedColumns.length === 0) {
         return res.status(400).json({ error: 'Data tidak lengkap untuk generate laporan.' });
     }
 
     const fileMainPath = path.join(__dirname, 'uploads', fileMainName);
-    const fileLookupPath = path.join(__dirname, 'uploads', fileLookupName);
+    const fileLookupAPath = path.join(__dirname, 'uploads', fileLookupAName);
+    const fileLookupBPath = path.join(__dirname, 'uploads', fileLookupBName);
     
-    if (!fs.existsSync(fileMainPath) || !fs.existsSync(fileLookupPath)) {
+    if (!fs.existsSync(fileMainPath) || !fs.existsSync(fileLookupAPath) || !fs.existsSync(fileLookupBPath)) {
         return res.status(400).json({ error: 'Sesi file tidak ditemukan. Harap unggah ulang file.' });
     }
 
     try {
-        // --- Membaca File Excel (Seluruhnya) ---
+        // --- Membaca 3 File Excel ---
         const wbMain = xlsx.readFile(fileMainPath);
-        const wbLookup = xlsx.readFile(fileLookupPath);
+        const wbLookupA = xlsx.readFile(fileLookupAPath);
+        const wbLookupB = xlsx.readFile(fileLookupBPath);
 
         const sheet1Data = xlsx.utils.sheet_to_json(wbMain.Sheets[wbMain.SheetNames[0]]);
-        const sheet2Data = xlsx.utils.sheet_to_json(wbLookup.Sheets[wbLookup.SheetNames[0]]);
+        const sheet2DataA = xlsx.utils.sheet_to_json(wbLookupA.Sheets[wbLookupA.SheetNames[0]]);
+        const sheet2DataB = xlsx.utils.sheet_to_json(wbLookupB.Sheets[wbLookupB.SheetNames[0]]);
 
-        // --- Optimasi VLOOKUP (membuat Map) ---
-        const lookupMap = new Map();
-        for (const row of sheet2Data) {
+        // --- BARU: Optimasi VLOOKUP (membuat 2 Map) ---
+        const lookupMapA = new Map();
+        for (const row of sheet2DataA) {
             const key = row[KEY_COLUMN];
-            if (key) {
-                lookupMap.set(key, row);
-            }
+            if (key) lookupMapA.set(key, row);
+        }
+        
+        const lookupMapB = new Map();
+        for (const row of sheet2DataB) {
+            const key = row[KEY_COLUMN];
+            if (key) lookupMapB.set(key, row);
         }
 
         // --- Proses Penggabungan Data (VLOOKUP) ---
@@ -127,37 +139,43 @@ app.post('/generate-report', async (req, res) => {
 
         for (const rowSheet1 of sheet1Data) {
             const lookupValue = rowSheet1[KEY_COLUMN];
-            const matchSheet2 = lookupMap.get(lookupValue);
+            
+            // BARU: Cari di kedua map
+            const matchSheetA = lookupMapA.get(lookupValue);
+            const matchSheetB = lookupMapB.get(lookupValue);
 
             let newRow = {};
 
-            // === LOGIKA BARU ===
             // Loop melalui array 'orderedColumns' yang dikirim dari frontend
             for (const colInfo of orderedColumns) {
                 const colName = colInfo.column;
 
                 if (colInfo.source === 'main') {
-                    // Jika sumbernya 'main', ambil dari rowSheet1
                     newRow[colName] = rowSheet1[colName];
                 
-                } else if (colInfo.source === 'lookup') {
-                    // Jika sumbernya 'lookup', ambil dari data yang cocok (matchSheet2)
-                    if (matchSheet2) {
-                        newRow[colName] = matchSheet2[colName]; // Data ditemukan
+                } else if (colInfo.source === 'lookupA') {
+                    // Ambil dari Referensi A
+                    if (matchSheetA) {
+                        newRow[colName] = matchSheetA[colName];
                     } else {
-                        newRow[colName] = "data_tidak_ditemukan"; // Data tidak ditemukan
+                        newRow[colName] = "data_tidak_ditemukan_A"; // Teks spesifik
+                    }
+                
+                } else if (colInfo.source === 'lookupB') {
+                    // Ambil dari Referensi B
+                    if (matchSheetB) {
+                        newRow[colName] = matchSheetB[colName];
+                    } else {
+                        newRow[colName] = "data_tidak_ditemukan_B"; // Teks spesifik
                     }
                 }
             }
-            // ===================
             
             combinedData.push(newRow);
         }
 
         // --- Membuat File Excel Baru (Output) ---
         const newWorkbook = xlsx.utils.book_new();
-        // Penting: json_to_sheet akan otomatis mengikuti urutan key di objek newRow,
-        // yang mana sudah kita tentukan urutannya saat membangun newRow.
         const newWorksheet = xlsx.utils.json_to_sheet(combinedData);
         xlsx.utils.book_append_sheet(newWorkbook, newWorksheet, 'Hasil_VLOOKUP');
         const outputBuffer = xlsx.write(newWorkbook, { bookType: 'xlsx', type: 'buffer' });
@@ -171,9 +189,10 @@ app.post('/generate-report', async (req, res) => {
         console.error(error);
         res.status(500).json({ error: 'Terjadi error internal saat memproses file: ' + error.message });
     } finally {
-        // --- PENTING: Hapus file sementara ---
+        // --- BARU: Hapus 3 file sementara ---
         fs.unlinkSync(fileMainPath);
-        fs.unlinkSync(fileLookupPath);
+        fs.unlinkSync(fileLookupAPath);
+        fs.unlinkSync(fileLookupBPath);
     }
 });
 
