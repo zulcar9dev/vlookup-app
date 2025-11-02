@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aplikasi VLOOKUP Otomatis</title>
+    <title>Aplikasi VLOOKUP Data Penagihan Debitur</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 
@@ -28,7 +28,7 @@
             padding: 2.5rem 3rem;
             border-radius: 12px;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
-            max-width: 1200px; /* Perlebar kontainer */
+            max-width: 1200px;
             margin: 0 auto;
             border: 1px solid #e0e0e0;
         }
@@ -38,13 +38,7 @@
         
         /* Form Styling */
         form { margin-top: 2rem; }
-        .file-inputs {
-            display: grid;
-            /* BARU: 3 kolom untuk 3 file */
-            grid-template-columns: 1fr 1fr 1fr; 
-            gap: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
+        .file-inputs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
         .file-input-group label { display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--dark-text); }
         input[type="file"] { width: 100%; padding: 12px; border: 2px dashed #ddd; border-radius: 8px; background-color: #f9f9f9; cursor: pointer; transition: border-color 0.2s; }
         input[type="file"]:hover { border-color: var(--primary-color); }
@@ -59,67 +53,36 @@
         /* Drag & Drop Area */
         .drag-drop-area {
             display: grid;
-            /* BARU: 4 kolom (1fr 1fr 1fr 1.2fr) */
             grid-template-columns: 1fr 1fr 1fr 1.2fr; 
             gap: 1.5rem;
-            margin-top: 2rem;
-            display: none; /* Sembunyi awalnya */
-            align-items: start; /* Pastikan kolom sejajar di atas */
+            margin-top: 1.5rem;
+            display: none;
+            align-items: start;
         }
-        .drag-list-container {
-            background: #fdfdfd;
-            border: 1px solid #eee;
-            border-radius: 8px;
-            padding: 1rem;
-        }
-        .drag-list-container h3 {
-            margin-top: 0;
-            border-bottom: 2px solid #eee;
-            padding-bottom: 0.5rem;
-        }
-        .drag-list {
-            min-height: 450px; 
-            background: #f9f9f9;
-            border-radius: 5px;
-            padding: 0.5rem;
-            border: 1px dashed #ddd;
-        }
-        .list-item {
-            background: #fff;
-            padding: 0.75rem 1rem;
-            margin-bottom: 0.5rem;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            cursor: grab;
-            font-size: 0.9rem;
-            font-weight: 500;
-        }
+        .drag-list-container { background: #fdfdfd; border: 1px solid #eee; border-radius: 8px; padding: 1rem; }
+        .drag-list-container h3 { margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 0.5rem; }
+        .drag-list { min-height: 450px; background: #f9f9f9; border-radius: 5px; padding: 0.5rem; border: 1px dashed #ddd; }
+        .list-item { background: #fff; padding: 0.75rem 1rem; margin-bottom: 0.5rem; border: 1px solid #ddd; border-radius: 5px; cursor: grab; font-size: 0.9rem; font-weight: 500; }
         .list-item:active { cursor: grabbing; }
-        .target-list {
-            border-color: var(--primary-color);
-            background: #f4f9ff;
-        }
-        .target-list .list-item {
-            background: #e6f2ff;
-            border-color: var(--primary-color);
-        }
+        .target-list { border-color: var(--primary-color); background: #f4f9ff; }
+        .target-list .list-item { background: #e6f2ff; border-color: var(--primary-color); }
         .sortable-ghost { opacity: 0.4; background: #cce4ff; }
         .sortable-chosen { background: #aed6ff; }
 
         /* Style untuk input pencarian */
-        .search-input {
-            width: 100%;
-            padding: 0.5rem 0.75rem;
-            margin-bottom: 0.75rem;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            box-sizing: border-box;
+        .search-input { width: 100%; padding: 0.5rem 0.75rem; margin-bottom: 0.75rem; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        .search-input:focus { border-color: var(--primary-color); outline: none; box-shadow: 0 0 0 2px rgba(0,123,255,0.2); }
+
+        /* Style untuk Toggle */
+        .toggle-container {
+            margin-top: 2rem;
+            margin-bottom: -0.5rem;
+            display: none;
+            text-align: right;
+            padding: 0.5rem;
         }
-        .search-input:focus {
-            border-color: var(--primary-color);
-            outline: none;
-            box-shadow: 0 0 0 2px rgba(0,123,255,0.2);
-        }
+        .toggle-container label { margin-left: 0.5rem; font-weight: 500; color: var(--dark-text); cursor: pointer; font-size: 0.9rem; }
+        .toggle-container input[type="checkbox"] { cursor: pointer; transform: scale(1.1); }
 
         /* Status & Loading */
         .status-container { margin-top: 1.5rem; text-align: center; }
@@ -129,12 +92,11 @@
         .progress-bar { width: 100%; height: 100%; background: linear-gradient(90deg, #c2e0ff 25%, var(--primary-color) 50%, #c2e0ff 75%); background-size: 200% 100%; border-radius: 8px; animation: indeterminate-slide 2s linear infinite; }
         .loading-text { color: var(--medium-text); margin-top: 0.75rem; font-size: 0.95rem; }
         @keyframes indeterminate-slide { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>VLOOKUP Otomatis 🚀</h1>
+        <h1>VLOOKUP Data Penagihan Debitur 🚀</h1>
         <p>
             Unggah file Anda, seret kolom yang diinginkan untuk diurutkan, dan gabungkan datanya.
             Kunci pencocokan: <strong>'BNI_CIF_KEY'</strong>.
@@ -169,6 +131,11 @@
             <div id="error-message"></div>
         </div>
 
+        <div class="toggle-container" id="toggle-container">
+            <input type="checkbox" id="filter-unmatched-cols">
+            <label for="filter-unmatched-cols">Sembunyikan kolom yang tidak ada di file utama</label>
+        </div>
+
         <div class="drag-drop-area" id="drag-drop-area">
             <div class="drag-list-container">
                 <h3>Kolom File Utama</h3>
@@ -198,7 +165,7 @@
         const form = document.getElementById('upload-form');
         const fileMainInput = document.getElementById('fileMain');
         const fileLookupAInput = document.getElementById('fileLookupA');
-        const fileLookupBInput = document.getElementById('fileLookupB'); // BARU
+        const fileLookupBInput = document.getElementById('fileLookupB');
         
         const btnInspect = document.getElementById('btn-inspect');
         const btnGenerate = document.getElementById('btn-generate');
@@ -209,22 +176,28 @@
         const dragDropArea = document.getElementById('drag-drop-area');
         const mainColsList = document.getElementById('main-cols-list');
         const lookupAColsList = document.getElementById('lookup-A-cols-list');
-        const lookupBColsList = document.getElementById('lookup-B-cols-list'); // BARU
+        const lookupBColsList = document.getElementById('lookup-B-cols-list');
         const resultColsList = document.getElementById('result-cols-list');
 
         const searchLookupAInput = document.getElementById('search-lookup-A');
-        const searchLookupBInput = document.getElementById('search-lookup-B'); // BARU
+        const searchLookupBInput = document.getElementById('search-lookup-B');
+
+        // Ambil elemen toggle (NAMA VARIABEL DIUBAH)
+        const toggleContainer = document.getElementById('toggle-container');
+        const filterUnmatchedToggle = document.getElementById('filter-unmatched-cols');
 
         // Variabel untuk menyimpan nama file sementara
         let tempFileMainName = '';
         let tempFileLookupAName = '';
-        let tempFileLookupBName = ''; // BARU
+        let tempFileLookupBName = '';
+        
+        // Variabel untuk menyimpan header file utama
+        let mainColumnHeaders = [];
 
         // --- TAHAP 1: Inspeksi File (Baca Kolom) ---
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
             
-            // BARU: Validasi 3 file
             if (fileMainInput.files.length === 0 || fileLookupAInput.files.length === 0 || fileLookupBInput.files.length === 0) {
                 showError('Harap pilih ketiga file.');
                 return;
@@ -234,7 +207,7 @@
             const formData = new FormData();
             formData.append('fileMain', fileMainInput.files[0]);
             formData.append('fileLookupA', fileLookupAInput.files[0]);
-            formData.append('fileLookupB', fileLookupBInput.files[0]); // BARU
+            formData.append('fileLookupB', fileLookupBInput.files[0]);
 
             try {
                 const response = await fetch('/inspect-files', {
@@ -249,19 +222,23 @@
 
                 const data = await response.json();
                 
-                // BARU: Simpan 3 nama file
                 tempFileMainName = data.fileMainName;
                 tempFileLookupAName = data.fileLookupAName;
                 tempFileLookupBName = data.fileLookupBName;
 
+                // Simpan header utama di cache
+                mainColumnHeaders = data.mainHeaders;
+
                 // Tampilkan daftar kolom
                 populateColumnList(mainColsList, data.mainHeaders, 'main');
                 populateColumnList(lookupAColsList, data.lookupAHeaders, 'lookupA');
-                populateColumnList(lookupBColsList, data.lookupBHeaders, 'lookupB'); // BARU
+                populateColumnList(lookupBColsList, data.lookupBHeaders, 'lookupB');
                 
-                // Inisialisasi SortableJS
                 initDragAndDrop();
 
+                // Tampilkan toggle
+                toggleContainer.style.display = 'block';
+                
                 dragDropArea.style.display = 'grid';
                 btnGenerate.style.display = 'block';
                 btnInspect.disabled = true;
@@ -297,7 +274,7 @@
                     body: JSON.stringify({
                         fileMainName: tempFileMainName,
                         fileLookupAName: tempFileLookupAName,
-                        fileLookupBName: tempFileLookupBName, // BARU
+                        fileLookupBName: tempFileLookupBName,
                         orderedColumns: orderedColumns 
                     })
                 });
@@ -326,21 +303,54 @@
             }
         });
 
-        // --- Event Listener untuk Pencarian Kolom ---
+        // --- Event Listener untuk Pencarian dan Toggle ---
+        
+        // Event listener untuk toggle (VARIABEL DIUBAH)
+        filterUnmatchedToggle.addEventListener('change', () => {
+            const isChecked = filterUnmatchedToggle.checked;
+            // Panggil ulang filter untuk kedua list
+            filterReferenceList(lookupAColsList, searchLookupAInput.value, isChecked);
+            filterReferenceList(lookupBColsList, searchLookupBInput.value, isChecked);
+        });
+        
         searchLookupAInput.addEventListener('input', () => {
-            filterList(lookupAColsList, searchLookupAInput.value);
+            filterReferenceList(lookupAColsList, searchLookupAInput.value, filterUnmatchedToggle.checked);
         });
         
-        searchLookupBInput.addEventListener('input', () => { // BARU
-            filterList(lookupBColsList, searchLookupBInput.value);
+        searchLookupBInput.addEventListener('input', () => {
+            filterReferenceList(lookupBColsList, searchLookupBInput.value, filterUnmatchedToggle.checked);
         });
         
-        function filterList(listElement, searchTerm) {
+        // LOGIKA FILTER DIUBAH (DIBALIK)
+        function filterReferenceList(listElement, searchTerm, isHideEnabled) {
             const normalizedSearch = searchTerm.toLowerCase();
             const items = listElement.querySelectorAll('.list-item');
+            
             items.forEach(item => {
-                const itemText = item.textContent.toLowerCase();
-                item.style.display = itemText.includes(normalizedSearch) ? 'block' : 'none';
+                const itemText = item.textContent;
+                const itemTextLower = itemText.toLowerCase();
+
+                // Kondisi 1: Pencarian
+                const matchesSearch = itemTextLower.includes(normalizedSearch);
+
+                // Kondisi 2: Sembunyikan
+                // Cek apakah item ini ada di daftar header utama
+                const isMatchedInMain = mainColumnHeaders.includes(itemText);
+                const isKeyColumn = itemText === 'BNI_CIF_KEY';
+                
+                let shouldHide = false;
+                // Sembunyikan jika toggle dicentang DAN item TIDAK ADA di file utama
+                // (dan bukan kolom kunci)
+                if (isHideEnabled && !isMatchedInMain && !isKeyColumn) {
+                    shouldHide = true;
+                }
+                
+                // Tampilkan HANYA jika lolos pencarian DAN tidak disembunyikan
+                if (matchesSearch && !shouldHide) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
             });
         }
 
@@ -363,8 +373,6 @@
         }
 
         function initDragAndDrop() {
-            // Hapus baris 'Sortable.mount' jika ada
-            
             const sortableOptions = {
                 group: 'shared',
                 animation: 150,
@@ -373,11 +381,9 @@
                 scrollSensitivity: 50,
                 scrollSpeed: 15
             };
-
-            // BARU: Inisialisasi 4 daftar
             new Sortable(mainColsList, sortableOptions);
             new Sortable(lookupAColsList, sortableOptions);
-            new Sortable(lookupBColsList, sortableOptions); // BARU
+            new Sortable(lookupBColsList, sortableOptions);
             new Sortable(resultColsList, sortableOptions);
         }
 
@@ -405,15 +411,21 @@
             dragDropArea.style.display = 'none';
             btnGenerate.style.display = 'none';
             btnInspect.disabled = false;
+            
+            // Reset toggle dan cache (VARIABEL DIUBAH)
+            toggleContainer.style.display = 'none';
+            filterUnmatchedToggle.checked = false;
+            mainColumnHeaders = [];
+
             tempFileMainName = '';
             tempFileLookupAName = '';
-            tempFileLookupBName = ''; // BARU
+            tempFileLookupBName = '';
             mainColsList.innerHTML = '';
             lookupAColsList.innerHTML = '';
-            lookupBColsList.innerHTML = ''; // BARU
+            lookupBColsList.innerHTML = '';
             resultColsList.innerHTML = '';
-            searchLookupAInput.value = ''; // BARU
-            searchLookupBInput.value = ''; // BARU
+            searchLookupAInput.value = '';
+            searchLookupBInput.value = '';
         }
 
     </script>
