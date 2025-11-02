@@ -122,6 +122,54 @@
             font-weight: bold;
             word-wrap: break-word;
         }
+
+/* BARU: Style untuk Loading Bar */
+        #loading-container {
+            width: 100%;
+        }
+        .loading-text {
+            color: var(--medium-text);
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 10px;
+            background-color: #e9ecef;
+            border-radius: 8px;
+            overflow: hidden; /* Penting agar animasi rapi */
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 100%;
+            /* Ini adalah trik gradien geser untuk animasi indeterminate */
+            background: linear-gradient(
+                90deg, 
+                #c2e0ff 25%, /* Warna lebih terang */
+                var(--primary-color) 50%, 
+                #c2e0ff 75%  /* Warna lebih terang */
+            );
+            background-size: 200% 100%; /* Ukuran gradien 2x lipat */
+            border-radius: 8px;
+            
+            /* Menjalankan animasi 'indeterminate-slide' */
+            animation: indeterminate-slide 2s linear infinite;
+        }
+
+        /* BARU: Keyframes untuk animasi */
+        @keyframes indeterminate-slide {
+            0% {
+                /* Gradien mulai dari kanan */
+                background-position: 200% 0;
+            }
+            100% {
+                /* Gradien berakhir di kiri */
+                background-position: -200% 0;
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -145,7 +193,14 @@
         </form>
 
         <div class="status-container">
-            <div id="loading">Memproses file, mohon tunggu... ⏳</div>
+            
+            <div id="loading-container" style="display: none;">
+                <div class="progress-bar-container">
+                    <div class="progress-bar"></div>
+                </div>
+                <div class="loading-text">Memproses file, mohon tunggu... ⏳</div>
+            </div>
+
             <div id="error-message"></div>
         </div>
     </div>
@@ -154,7 +209,7 @@
         // Ambil elemen-elemen yang kita butuhkan
         const form = document.getElementById('upload-form');
         const fileInput = document.getElementById('excelFile');
-        const loadingDiv = document.getElementById('loading');
+        const loadingContainer = document.getElementById('loading-container');
         const errorDiv = document.getElementById('error-message');
 
         // Tambahkan event listener saat form di-submit
@@ -163,7 +218,7 @@
             event.preventDefault();
 
             // 2. Tampilkan loading, sembunyikan error lama
-            loadingDiv.style.display = 'block';
+            loadingContainer.style.display = 'block';
             errorDiv.style.display = 'none';
 
             // === TAMBAHKAN VALIDASI INI ===
@@ -171,7 +226,7 @@
             if (fileInput.files.length === 0) {
                 errorDiv.textContent = 'Silakan pilih file terlebih dahulu.';
                 errorDiv.style.display = 'block';
-                loadingDiv.style.display = 'none';
+                loadingContainer.style.display = 'none';
                 return; // Hentikan eksekusi fungsi
             }
             // ================================
@@ -220,7 +275,7 @@
                 errorDiv.style.display = 'block';
             } finally {
                 // 8. Selalu sembunyikan loading setelah selesai
-                loadingDiv.style.display = 'none';
+                loadingContainer.style.display = 'none';
             }
         });
     </script>
