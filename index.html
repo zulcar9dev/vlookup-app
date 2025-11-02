@@ -5,45 +5,122 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aplikasi VLOOKUP Otomatis</title>
     <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #0056b3;
+            --light-grey: #f4f7f6;
+            --dark-text: #333;
+            --medium-text: #555;
+            --error-color: #d9534f;
+            --success-color: #5cb85c;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             display: grid;
             place-items: center;
             min-height: 90vh;
-            background-color: #f4f7f6;
+            background-color: var(--light-grey);
+            margin: 0;
+            padding: 1rem;
         }
+
         .container {
             background: #ffffff;
-            padding: 2rem;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            padding: 2.5rem 3rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
             text-align: center;
+            width: 100%;
+            max-width: 500px;
+            border: 1px solid #e0e0e0;
         }
+
         h1 {
-            color: #333;
+            color: var(--dark-text);
             margin-top: 0;
+            font-weight: 700;
         }
+
         p {
-            color: #555;
-            max-width: 400px;
+            color: var(--medium-text);
+            line-height: 1.6;
         }
+
+        form {
+            margin-top: 2rem;
+        }
+
         input[type="file"] {
-            margin-top: 1rem;
+            width: 100%;
+            padding: 12px;
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+            cursor: pointer;
+            transition: border-color 0.2s, background-color 0.2s;
         }
-        button {
-            margin-top: 1.5rem;
-            padding: 0.75rem 1.5rem;
-            font-size: 1rem;
+
+        input[type="file"]::file-selector-button {
+            margin-right: 12px;
+            padding: 0.5rem 1rem;
             font-weight: bold;
-            color: white;
-            background-color: #007bff;
-            border: none;
+            color: var(--primary-color);
+            background: #fff;
+            border: 1px solid var(--primary-color);
             border-radius: 5px;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: all 0.2s;
         }
+
+        input[type="file"]:hover {
+            border-color: var(--primary-color);
+            background-color: #fdfdfd;
+        }
+
+        input[type="file"]::file-selector-button:hover {
+            background: var(--primary-color);
+            color: #fff;
+        }
+
+        button {
+            margin-top: 1.5rem;
+            padding: 0.85rem 1.75rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: white;
+            background-color: var(--primary-color);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            width: 100%;
+        }
+
         button:hover {
-            background-color: #0056b3;
+            background-color: var(--secondary-color);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        /* Elemen Status (Baru) */
+        .status-container {
+            margin-top: 1.5rem;
+            font-size: 0.95rem;
+        }
+
+        #loading {
+            display: none; /* Sembunyi secara default */
+            color: var(--medium-text);
+        }
+
+        #error-message {
+            display: none; /* Sembunyi secara default */
+            color: var(--error-color);
+            font-weight: bold;
+            word-wrap: break-word;
         }
     </style>
 </head>
@@ -56,16 +133,96 @@
             <strong>'BNI_CIF_KEY'</strong>.
         </p>
         
-        <form action="/upload" method="POST" enctype="multipart/form-data">
+        <form id="upload-form">
             <input 
                 type="file" 
+                id="excelFile"
                 name="excelFile" 
                 accept=".xlsx, .xls"
-                required 
             />
             <br />
             <button type="submit">Proses dan Unduh Hasil</button>
         </form>
+
+        <div class="status-container">
+            <div id="loading">Memproses file, mohon tunggu... ⏳</div>
+            <div id="error-message"></div>
+        </div>
     </div>
+
+    <script>
+        // Ambil elemen-elemen yang kita butuhkan
+        const form = document.getElementById('upload-form');
+        const fileInput = document.getElementById('excelFile');
+        const loadingDiv = document.getElementById('loading');
+        const errorDiv = document.getElementById('error-message');
+
+        // Tambahkan event listener saat form di-submit
+        form.addEventListener('submit', async (event) => {
+            // 1. Hentikan aksi default form (pindah halaman)
+            event.preventDefault();
+
+            // 2. Tampilkan loading, sembunyikan error lama
+            loadingDiv.style.display = 'block';
+            errorDiv.style.display = 'none';
+
+            // === TAMBAHKAN VALIDASI INI ===
+            // Cek jika tidak ada file yang dipilih
+            if (fileInput.files.length === 0) {
+                errorDiv.textContent = 'Silakan pilih file terlebih dahulu.';
+                errorDiv.style.display = 'block';
+                loadingDiv.style.display = 'none';
+                return; // Hentikan eksekusi fungsi
+            }
+            // ================================
+
+            // 3. Buat FormData untuk dikirim
+            const formData = new FormData(); // <-- HANYA ADA SATU BARIS
+            formData.append('excelFile', fileInput.files[0]);
+
+            try {
+                // 4. Kirim data ke server menggunakan fetch
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                // 5. Cek jika respons TIDAK sukses (bukan 200-299)
+                if (!response.ok) {
+                    // Ambil pesan error JSON dari server
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Terjadi error tidak diketahui');
+                }
+
+                // 6. Jika sukses (respons adalah file Excel)
+                // Dapatkan file sebagai 'blob' (data biner)
+                const blob = await response.blob();
+                
+                // Buat URL sementara untuk file blob
+                const url = window.URL.createObjectURL(blob);
+                
+                // Buat link <a> 'siluman' untuk memicu download
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'Hasil_VLOOKUP.xlsx'; // Nama file unduhan
+                
+                // Tambahkan link ke body, klik, lalu hapus
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+
+            } catch (err) {
+                // 7. Jika terjadi error (dari server atau jaringan)
+                // Tampilkan pesan error di div
+                errorDiv.textContent = err.message;
+                errorDiv.style.display = 'block';
+            } finally {
+                // 8. Selalu sembunyikan loading setelah selesai
+                loadingDiv.style.display = 'none';
+            }
+        });
+    </script>
 </body>
 </html>

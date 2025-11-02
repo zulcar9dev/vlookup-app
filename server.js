@@ -45,7 +45,7 @@ app.post('/upload', upload.single('excelFile'), (req, res) => {
     
     // Validasi: Pastikan file ada
     if (!req.file) {
-        return res.status(400).send('Tidak ada file yang diunggah.');
+        return res.status(400).json({ error: 'Tidak ada file yang diunggah.' });
     }
 
     try {
@@ -54,7 +54,7 @@ app.post('/upload', upload.single('excelFile'), (req, res) => {
 
         // Validasi: Pastikan sheet yang dibutuhkan ada
         if (!workbook.SheetNames.includes(SHEET1_NAME) || !workbook.SheetNames.includes(SHEET2_NAME)) {
-            return res.status(400).send(`Error: Pastikan file Excel Anda memiliki sheet bernama '${SHEET1_NAME}' dan '${SHEET2_NAME}'.`);
+            return res.status(400).json({ error: `Error: Pastikan file Excel Anda memiliki sheet bernama '${SHEET1_NAME}' dan '${SHEET2_NAME}'.` });
         }
         
         // Ubah sheet menjadi data JSON
@@ -125,7 +125,7 @@ app.post('/upload', upload.single('excelFile'), (req, res) => {
 
     } catch (error) {
         console.error(error);
-        res.status(500).send('Terjadi error saat memproses file: ' + error.message);
+        res.status(500).json({ error: 'Terjadi error internal saat memproses file: ' + error.message });
     }
 });
 
