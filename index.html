@@ -92,6 +92,15 @@
         .progress-bar { width: 100%; height: 100%; background: linear-gradient(90deg, #c2e0ff 25%, var(--primary-color) 50%, #c2e0ff 75%); background-size: 200% 100%; border-radius: 8px; animation: indeterminate-slide 2s linear infinite; }
         .loading-text { color: var(--medium-text); margin-top: 0.75rem; font-size: 0.95rem; }
         @keyframes indeterminate-slide { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        /* BARU: Style untuk Copyright */
+        .copyright {
+            margin-top: 2.5rem; /* Beri jarak dari tombol */
+            margin-bottom: 0;
+            font-size: 0.85rem;
+            color: var(--medium-text);
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -158,6 +167,10 @@
         </div>
 
         <button id="btn-generate">Proses & Unduh Laporan</button>
+
+        <p class="copyright">
+            Copyright © 2025 [Zulkarnain Machmud - Staff BCR BNI Gorontalo]. All rights reserved.
+        </p>
     </div>
 
     <script>
