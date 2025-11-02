@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aplikasi VLOOKUP Otomatis</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>    
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.AutoScroll.min.js"></script>
+
     <style>
         :root {
             --primary-color: #007bff;
@@ -14,161 +18,120 @@
             --error-color: #d9534f;
             --success-color: #5cb85c;
         }
-
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            display: grid;
-            place-items: center;
-            min-height: 90vh;
             background-color: var(--light-grey);
             margin: 0;
-            padding: 1rem;
+            padding: 2rem;
         }
-
         .container {
             background: #ffffff;
             padding: 2.5rem 3rem;
             border-radius: 12px;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
-            text-align: center;
-            width: 100%;
-            max-width: 500px;
+            max-width: 900px; /* Perlebar kontainer */
+            margin: 0 auto;
             border: 1px solid #e0e0e0;
         }
+        h1, p { text-align: center; }
+        h1 { color: var(--dark-text); margin-top: 0; font-weight: 700; }
+        p { color: var(--medium-text); line-height: 1.6; }
+        
+        /* Form Styling */
+        form { margin-top: 2rem; }
+        .file-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+        .file-input-group label { display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--dark-text); }
+        input[type="file"] { width: 100%; padding: 12px; border: 2px dashed #ddd; border-radius: 8px; background-color: #f9f9f9; cursor: pointer; transition: border-color 0.2s; }
+        input[type="file"]:hover { border-color: var(--primary-color); }
 
-        h1 {
-            color: var(--dark-text);
-            margin-top: 0;
-            font-weight: 700;
-        }
-
-        p {
-            color: var(--medium-text);
-            line-height: 1.6;
-        }
-
-        form {
+        /* Button Styling */
+        button { padding: 0.85rem 1.75rem; font-size: 1.1rem; font-weight: 600; color: white; background-color: var(--primary-color); border: none; border-radius: 8px; cursor: pointer; transition: background-color 0.2s; width: 100%; }
+        button:hover { background-color: var(--secondary-color); }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        #btn-generate { background-color: var(--success-color); margin-top: 1.5rem; display: none; }
+        #btn-generate:hover { background-color: #4a9d4a; }
+        
+        /* BARU: Drag & Drop Area */
+        .drag-drop-area {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1.2fr; /* Tiga kolom */
+            gap: 1.5rem;
             margin-top: 2rem;
+            display: none; /* Sembunyi awalnya */
         }
-
-        input[type="file"] {
-            width: 100%;
-            padding: 12px;
-            border: 2px dashed #ddd;
+        .drag-list-container {
+            background: #fdfdfd;
+            border: 1px solid #eee;
             border-radius: 8px;
-            background-color: #f9f9f9;
-            cursor: pointer;
-            transition: border-color 0.2s, background-color 0.2s;
+            padding: 1rem;
         }
-
-        input[type="file"]::file-selector-button {
-            margin-right: 12px;
-            padding: 0.5rem 1rem;
-            font-weight: bold;
-            color: var(--primary-color);
-            background: #fff;
-            border: 1px solid var(--primary-color);
+        .drag-list-container h3 {
+            margin-top: 0;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 0.5rem;
+        }
+        .drag-list {
+            min-height: 7000px; /* Area untuk drop (dibuat lebih panjang) */
+            background: #f9f9f9;
             border-radius: 5px;
-            cursor: pointer;
-            transition: all 0.2s;
+            padding: 0.5rem;
+            border: 1px dashed #ddd;
         }
-
-        input[type="file"]:hover {
-            border-color: var(--primary-color);
-            background-color: #fdfdfd;
+        .list-item {
+            background: #fff;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            cursor: grab;
+            font-size: 0.9rem;
+            font-weight: 500;
         }
+        .list-item:active { cursor: grabbing; }
 
-        input[type="file"]::file-selector-button:hover {
-            background: var(--primary-color);
-            color: #fff;
-        }
-
-        button {
-            margin-top: 1.5rem;
-            padding: 0.85rem 1.75rem;
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: white;
-            background-color: var(--primary-color);
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background-color 0.2s, transform 0.1s;
+/* BARU: Style untuk input pencarian */
+        .search-input {
             width: 100%;
-        }
-
-        button:hover {
-            background-color: var(--secondary-color);
-        }
-
-        button:active {
-            transform: scale(0.98);
-        }
-
-        /* Elemen Status (Baru) */
-        .status-container {
-            margin-top: 1.5rem;
-            font-size: 0.95rem;
-        }
-
-        #loading {
-            display: none; /* Sembunyi secara default */
-            color: var(--medium-text);
-        }
-
-        #error-message {
-            display: none; /* Sembunyi secara default */
-            color: var(--error-color);
-            font-weight: bold;
-            word-wrap: break-word;
-        }
-
-/* BARU: Style untuk Loading Bar */
-        #loading-container {
-            width: 100%;
-        }
-        .loading-text {
-            color: var(--medium-text);
+            padding: 0.5rem 0.75rem;
             margin-bottom: 0.75rem;
-            font-size: 0.95rem;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box; /* Penting agar padding tidak merusak layout */
         }
-
-        .progress-bar-container {
-            width: 100%;
-            height: 10px;
-            background-color: #e9ecef;
-            border-radius: 8px;
-            overflow: hidden; /* Penting agar animasi rapi */
+        .search-input:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.2);
         }
         
-        .progress-bar {
-            width: 100%;
-            height: 100%;
-            /* Ini adalah trik gradien geser untuk animasi indeterminate */
-            background: linear-gradient(
-                90deg, 
-                #c2e0ff 25%, /* Warna lebih terang */
-                var(--primary-color) 50%, 
-                #c2e0ff 75%  /* Warna lebih terang */
-            );
-            background-size: 200% 100%; /* Ukuran gradien 2x lipat */
-            border-radius: 8px;
-            
-            /* Menjalankan animasi 'indeterminate-slide' */
-            animation: indeterminate-slide 2s linear infinite;
+        /* Style untuk target drop */
+        .target-list {
+            border-color: var(--primary-color);
+            background: #f4f9ff;
+        }
+        .target-list .list-item {
+            background: #e6f2ff;
+            border-color: var(--primary-color);
+        }
+        
+        /* Class dari SortableJS */
+        .sortable-ghost {
+            opacity: 0.4;
+            background: #cce4ff;
+        }
+        .sortable-chosen {
+            background: #aed6ff;
         }
 
-        /* BARU: Keyframes untuk animasi */
-        @keyframes indeterminate-slide {
-            0% {
-                /* Gradien mulai dari kanan */
-                background-position: 200% 0;
-            }
-            100% {
-                /* Gradien berakhir di kiri */
-                background-position: -200% 0;
-            }
-        }
+
+        /* Status & Loading */
+        .status-container { margin-top: 1.5rem; text-align: center; }
+        #error-message { color: var(--error-color); font-weight: bold; display: none; }
+        #loading-container { display: none; }
+        .progress-bar-container { width: 100%; height: 10px; background-color: #e9ecef; border-radius: 8px; overflow: hidden; }
+        .progress-bar { width: 100%; height: 100%; background: linear-gradient(90deg, #c2e0ff 25%, var(--primary-color) 50%, #c2e0ff 75%); background-size: 200% 100%; border-radius: 8px; animation: indeterminate-slide 2s linear infinite; }
+        .loading-text { color: var(--medium-text); margin-top: 0.75rem; font-size: 0.95rem; }
+        @keyframes indeterminate-slide { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
     </style>
 </head>
@@ -176,108 +139,289 @@
     <div class="container">
         <h1>VLOOKUP Otomatis 🚀</h1>
         <p>
-            Unggah file Excel Anda. Aplikasi akan memproses data dari 
-            <strong>Sheet1</strong> dan <strong>Sheet2</strong> berdasarkan kunci 
-            <strong>'BNI_CIF_KEY'</strong>.
+            Unggah dua file, seret kolom yang diinginkan untuk diurutkan, dan gabungkan datanya.
+            Kunci pencocokan: <strong>'BNI_CIF_KEY'</strong>.
         </p>
         
         <form id="upload-form">
-            <input 
-                type="file" 
-                id="excelFile"
-                name="excelFile" 
-                accept=".xlsx, .xls"
-            />
-            <br />
-            <button type="submit">Proses dan Unduh Hasil</button>
+            <div class="file-inputs">
+                <div class="file-input-group">
+                    <label for="fileMain">1. File Utama (Data yang akan ditambahi)</label>
+                    <input type="file" id="fileMain" name="fileMain" accept=".xlsx, .xls">
+                </div>
+                <div class="file-input-group">
+                    <label for="fileLookup">2. File Referensi (Data pencarian)</label>
+                    <input type="file" id="fileLookup" name="fileLookup" accept=".xlsx, .xls">
+                </div>
+            </div>
+            
+            <button type="submit" id="btn-inspect">Baca Kolom dari File</button>
         </form>
 
         <div class="status-container">
-            
-            <div id="loading-container" style="display: none;">
+            <div id="loading-container">
                 <div class="progress-bar-container">
                     <div class="progress-bar"></div>
                 </div>
                 <div class="loading-text">Memproses file, mohon tunggu... ⏳</div>
             </div>
-
             <div id="error-message"></div>
         </div>
+
+        <div class="drag-drop-area" id="drag-drop-area">
+            <div class="drag-list-container">
+                <h3>Kolom File Utama</h3>
+                <div id="main-cols-list" class="drag-list">
+                    </div>
+            </div>
+            <div class="drag-list-container">
+                <h3>Kolom File Referensi</h3>
+                <input type="search" id="search-lookup-cols" class="search-input" placeholder="Cari kolom...">
+                <div id="lookup-cols-list" class="drag-list">
+                    </div>
+            </div>
+            <div class="drag-list-container target-list">
+                <h3>Kolom Hasil (Seret & Urutkan)</h3>
+                <div id="result-cols-list" class="drag-list target-list">
+                    </div>
+            </div>
+        </div>
+
+        <button id="btn-generate">Proses & Unduh Laporan</button>
     </div>
 
     <script>
-        // Ambil elemen-elemen yang kita butuhkan
+        // Ambil elemen-elemen
         const form = document.getElementById('upload-form');
-        const fileInput = document.getElementById('excelFile');
+        const fileMainInput = document.getElementById('fileMain');
+        const fileLookupInput = document.getElementById('fileLookup');
+        
+        const btnInspect = document.getElementById('btn-inspect');
+        const btnGenerate = document.getElementById('btn-generate');
+
         const loadingContainer = document.getElementById('loading-container');
         const errorDiv = document.getElementById('error-message');
+        
+        // Elemen baru
+        const dragDropArea = document.getElementById('drag-drop-area');
+        const mainColsList = document.getElementById('main-cols-list');
+        const lookupColsList = document.getElementById('lookup-cols-list');
+        const resultColsList = document.getElementById('result-cols-list');
+        const searchLookupInput = document.getElementById('search-lookup-cols');
 
-        // Tambahkan event listener saat form di-submit
+        // Variabel untuk menyimpan nama file sementara
+        let tempFileMainName = '';
+        let tempFileLookupName = '';
+
+        // --- TAHAP 1: Inspeksi File (Baca Kolom) ---
         form.addEventListener('submit', async (event) => {
-            // 1. Hentikan aksi default form (pindah halaman)
             event.preventDefault();
-
-            // 2. Tampilkan loading, sembunyikan error lama
-            loadingContainer.style.display = 'block';
-            errorDiv.style.display = 'none';
-
-            // === TAMBAHKAN VALIDASI INI ===
-            // Cek jika tidak ada file yang dipilih
-            if (fileInput.files.length === 0) {
-                errorDiv.textContent = 'Silakan pilih file terlebih dahulu.';
-                errorDiv.style.display = 'block';
-                loadingContainer.style.display = 'none';
-                return; // Hentikan eksekusi fungsi
+            
+            if (fileMainInput.files.length === 0 || fileLookupInput.files.length === 0) {
+                showError('Harap pilih kedua file.');
+                return;
             }
-            // ================================
 
-            // 3. Buat FormData untuk dikirim
-            const formData = new FormData(); // <-- HANYA ADA SATU BARIS
-            formData.append('excelFile', fileInput.files[0]);
+            showLoading(true);
+            const formData = new FormData();
+            formData.append('fileMain', fileMainInput.files[0]);
+            formData.append('fileLookup', fileLookupInput.files[0]);
 
             try {
-                // 4. Kirim data ke server menggunakan fetch
-                const response = await fetch('/upload', {
+                const response = await fetch('/inspect-files', {
                     method: 'POST',
                     body: formData,
                 });
 
-                // 5. Cek jika respons TIDAK sukses (bukan 200-299)
                 if (!response.ok) {
-                    // Ambil pesan error JSON dari server
                     const errorData = await response.json();
-                    throw new Error(errorData.error || 'Terjadi error tidak diketahui');
+                    throw new Error(errorData.error);
                 }
 
-                // 6. Jika sukses (respons adalah file Excel)
-                // Dapatkan file sebagai 'blob' (data biner)
+                const data = await response.json();
+                
+                tempFileMainName = data.fileMainName;
+                tempFileLookupName = data.fileLookupName;
+
+                // Tampilkan daftar kolom
+                populateColumnList(mainColsList, data.mainHeaders, 'main');
+                populateColumnList(lookupColsList, data.lookupHeaders, 'lookup');
+                
+                // Inisialisasi SortableJS
+                initDragAndDrop();
+
+                // Tampilkan area drag/drop dan tombol generate
+                dragDropArea.style.display = 'grid';
+                btnGenerate.style.display = 'block';
+                btnInspect.disabled = true;
+
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                showLoading(false);
+            }
+        });
+
+        // --- TAHAP 2: Generate Laporan (VLOOKUP) ---
+        btnGenerate.addEventListener('click', async () => {
+            showLoading(true, "Menggabungkan data...");
+
+            // Kumpulkan kolom yang dipilih dari area hasil
+            const orderedColumns = getSelectedColumns();
+
+            if (orderedColumns.length === 0) {
+                showError('Harap seret setidaknya satu kolom ke "Kolom Hasil".');
+                showLoading(false);
+                return;
+            }
+
+            // Validasi: Pastikan Kunci VLOOKUP ada di dalam daftar hasil
+            const hasMainKey = orderedColumns.some(col => col.source === 'main' && col.column === 'BNI_CIF_KEY');
+            if (!hasMainKey) {
+                showError("Kolom 'BNI_CIF_KEY' dari File Utama wajib ada di 'Kolom Hasil'.");
+                showLoading(false);
+                return;
+            }
+
+            try {
+                const response = await fetch('/generate-report', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fileMainName: tempFileMainName,
+                        fileLookupName: tempFileLookupName,
+                        orderedColumns: orderedColumns // Kirim array objek terurut
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error);
+                }
+                
+                // Jika sukses (respons adalah file Excel)
                 const blob = await response.blob();
-                
-                // Buat URL sementara untuk file blob
                 const url = window.URL.createObjectURL(blob);
-                
-                // Buat link <a> 'siluman' untuk memicu download
                 const a = document.createElement('a');
                 a.style.display = 'none';
                 a.href = url;
-                a.download = 'Hasil_VLOOKUP.xlsx'; // Nama file unduhan
-                
-                // Tambahkan link ke body, klik, lalu hapus
+                a.download = 'Hasil_VLOOKUP_Kustom.xlsx';
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);
                 a.remove();
 
+                // Reset aplikasi
+                resetApp();
+
             } catch (err) {
-                // 7. Jika terjadi error (dari server atau jaringan)
-                // Tampilkan pesan error di div
-                errorDiv.textContent = err.message;
-                errorDiv.style.display = 'block';
+                showError(err.message);
             } finally {
-                // 8. Selalu sembunyikan loading setelah selesai
-                loadingContainer.style.display = 'none';
+                showLoading(false);
             }
         });
+
+// --- BARU: Event Listener untuk Pencarian Kolom Referensi ---
+    searchLookupInput.addEventListener('input', () => {
+        const searchTerm = searchLookupInput.value.toLowerCase();
+
+        // Ambil semua item di *dalam* daftar referensi
+        const items = lookupColsList.querySelectorAll('.list-item'); 
+
+        items.forEach(item => {
+            const itemText = item.textContent.toLowerCase();
+            if (itemText.includes(searchTerm)) {
+                item.style.display = 'block'; // Tampilkan jika cocok
+            } else {
+                item.style.display = 'none'; // Sembunyikan jika tidak cocok
+            }
+        });
+    });
+
+        // --- Helper Functions ---
+
+        function populateColumnList(listElement, headers, source) {
+            listElement.innerHTML = ''; // Hapus isi lama
+            
+            headers.forEach(header => {
+                const item = document.createElement('div');
+                item.className = 'list-item';
+                // Gunakan data-attributes untuk menyimpan info sumber dan nama kolom
+                item.dataset.source = source;
+                item.dataset.column = header;
+                item.textContent = header;
+                
+                // Otomatis masukkan BNI_CIF_KEY ke kotak hasil
+                if (header === 'BNI_CIF_KEY') {
+                    if (source === 'main') {
+                        // Kunci utama langsung ke kotak hasil
+                        resultColsList.appendChild(item);
+                    } else {
+                        // Kunci referensi tetap di daftarnya (opsional)
+                        listElement.appendChild(item);
+                    }
+                } else {
+                    listElement.appendChild(item);
+                }
+            });
+        }
+
+        function initDragAndDrop() {
+            
+            // Opsi bersama untuk semua daftar
+            const sortableOptions = {
+                group: 'shared',
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                
+                // BARU: Aktifkan auto-scroll untuk jendela browser
+                scroll: true, 
+                scrollSensitivity: 50, // Jarak (px) dari tepi layar untuk memicu scroll
+                scrollSpeed: 15       // Kecepatan scroll
+            };
+
+            // Inisialisasi untuk 3 daftar dengan opsi yang sama
+            new Sortable(mainColsList, sortableOptions);
+            new Sortable(lookupColsList, sortableOptions);
+            new Sortable(resultColsList, sortableOptions);
+        }
+
+        function getSelectedColumns() {
+            // Ambil semua item dari daftar hasil, SESUAI URUTAN
+            const items = resultColsList.querySelectorAll('.list-item');
+            return Array.from(items).map(item => {
+                // Kembalikan objek dengan info dari data-attributes
+                return {
+                    source: item.dataset.source,
+                    column: item.dataset.column
+                };
+            });
+        }
+
+        function showLoading(isLoading, message = "Memproses file, mohon tunggu... ⏳") {
+            loadingContainer.style.display = isLoading ? 'block' : 'none';
+            loadingContainer.querySelector('.loading-text').textContent = message;
+            if (isLoading) errorDiv.style.display = 'none';
+        }
+
+        function showError(message) {
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+        
+        function resetApp() {
+        form.reset();
+        dragDropArea.style.display = 'none';
+        btnGenerate.style.display = 'none';
+        btnInspect.disabled = false;
+        tempFileMainName = '';
+        tempFileLookupName = '';
+        mainColsList.innerHTML = '';
+        lookupColsList.innerHTML = '';
+        resultColsList.innerHTML = '';
+        searchLookupInput.value = ''; // <-- BARIS BARU
+    }
+
     </script>
 </body>
 </html>
