@@ -24,7 +24,6 @@ const storage = multer.diskStorage({
         cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
     }
 });
-// BARU: Terima 3 file
 const upload = multer({ storage: storage });
 
 // Helper function untuk membaca header
@@ -52,7 +51,7 @@ app.get('/', (req, res) => {
 
 /**
  * ENDPOINT 1: INSPEKSI FILE
- * BARU: Menangani 3 file
+ * (Tidak ada perubahan)
  */
 app.post('/inspect-files', upload.fields([
     { name: 'fileMain', maxCount: 1 },
@@ -60,7 +59,6 @@ app.post('/inspect-files', upload.fields([
     { name: 'fileLookupB', maxCount: 1 }
 ]), (req, res) => {
     
-    // BARU: Validasi 3 file
     if (!req.files || !req.files.fileMain || !req.files.fileLookupA || !req.files.fileLookupB) {
         return res.status(400).json({ error: 'Harap unggah ketiga file.' });
     }
@@ -80,7 +78,6 @@ app.post('/inspect-files', upload.fields([
         return res.status(400).json({ error: 'Gagal membaca header dari satu atau lebih file.' });
     }
 
-    // BARU: Kembalikan 3 set header dan 3 nama file
     res.json({
         mainHeaders: mainHeaders,
         lookupAHeaders: lookupAHeaders,
@@ -93,10 +90,10 @@ app.post('/inspect-files', upload.fields([
 
 /**
  * ENDPOINT 2: PROSES VLOOKUP & GENERATE
- * BARU: Menangani 3 file
+ * !!! PERUBAHAN UTAMA DI SINI !!!
  */
 app.post('/generate-report', async (req, res) => {
-    // BARU: Ambil 3 nama file
+    // Terima 'orderedColumns' (sekarang memiliki properti 'useFormula')
     const { fileMainName, fileLookupAName, fileLookupBName, orderedColumns } = req.body;
 
     if (!fileMainName || !fileLookupAName || !fileLookupBName || !orderedColumns || orderedColumns.length === 0) {
@@ -121,13 +118,12 @@ app.post('/generate-report', async (req, res) => {
         const sheet2DataA = xlsx.utils.sheet_to_json(wbLookupA.Sheets[wbLookupA.SheetNames[0]]);
         const sheet2DataB = xlsx.utils.sheet_to_json(wbLookupB.Sheets[wbLookupB.SheetNames[0]]);
 
-        // --- BARU: Optimasi VLOOKUP (membuat 2 Map) ---
+        // --- Optimasi VLOOKUP (membuat 2 Map) ---
         const lookupMapA = new Map();
         for (const row of sheet2DataA) {
             const key = row[KEY_COLUMN];
             if (key) lookupMapA.set(key, row);
         }
-        
         const lookupMapB = new Map();
         for (const row of sheet2DataB) {
             const key = row[KEY_COLUMN];
@@ -139,34 +135,52 @@ app.post('/generate-report', async (req, res) => {
 
         for (const rowSheet1 of sheet1Data) {
             const lookupValue = rowSheet1[KEY_COLUMN];
-            
-            // BARU: Cari di kedua map
             const matchSheetA = lookupMapA.get(lookupValue);
             const matchSheetB = lookupMapB.get(lookupValue);
 
             let newRow = {};
 
-            // Loop melalui array 'orderedColumns' yang dikirim dari frontend
+            // === Hitung Formula DULU ===
+            let calculatedStatus = "TAGIH";
+            let saldo = (matchSheetA && matchSheetA.SALDO_AKHIR_AFILIASI_NEW !== undefined) 
+                ? matchSheetA.SALDO_AKHIR_AFILIASI_NEW 
+                : (matchSheetB && matchSheetB.SALDO_AKHIR_AFILIASI_NEW);
+            let kewajiban = (matchSheetA && matchSheetA.Total_Kewajiban_New !== undefined) 
+                ? matchSheetA.Total_Kewajiban_New
+                : (matchSheetB && matchSheetB.Total_Kewajiban_New);
+
+            const saldoNum = parseFloat(saldo) || 0;
+            const kewajibanNum = parseFloat(kewajiban) || 0;
+
+            if (saldoNum > kewajibanNum) {
+                calculatedStatus = "AMAN";
+            }
+            // =============================
+
+            // === Loop melalui kolom pilihan pengguna ===
             for (const colInfo of orderedColumns) {
                 const colName = colInfo.column;
 
-                if (colInfo.source === 'main') {
+                // BARU: Cek formula DULUAN
+                if (colInfo.column === 'STATUS' && colInfo.useFormula === true) {
+                    newRow[colName] = calculatedStatus;
+                
+                // Jika tidak, baru cek sumber aslinya
+                } else if (colInfo.source === 'main') {
                     newRow[colName] = rowSheet1[colName];
                 
                 } else if (colInfo.source === 'lookupA') {
-                    // Ambil dari Referensi A
                     if (matchSheetA) {
                         newRow[colName] = matchSheetA[colName];
                     } else {
-                        newRow[colName] = "data_tidak_ditemukan_A"; // Teks spesifik
+                        newRow[colName] = "data_tidak_ditemukan_A";
                     }
                 
                 } else if (colInfo.source === 'lookupB') {
-                    // Ambil dari Referensi B
                     if (matchSheetB) {
                         newRow[colName] = matchSheetB[colName];
                     } else {
-                        newRow[colName] = "data_tidak_ditemukan_B"; // Teks spesifik
+                        newRow[colName] = "data_tidak_ditemukan_B";
                     }
                 }
             }
@@ -189,7 +203,6 @@ app.post('/generate-report', async (req, res) => {
         console.error(error);
         res.status(500).json({ error: 'Terjadi error internal saat memproses file: ' + error.message });
     } finally {
-        // --- BARU: Hapus 3 file sementara ---
         fs.unlinkSync(fileMainPath);
         fs.unlinkSync(fileLookupAPath);
         fs.unlinkSync(fileLookupBPath);

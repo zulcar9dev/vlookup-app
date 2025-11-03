@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aplikasi VLOOKUP Data Penagihan Debitur</title>
+    <title>Aplikasi VLOOKUP Lanjutan</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 
@@ -16,6 +16,7 @@
             --medium-text: #555;
             --error-color: #d9534f;
             --success-color: #5cb85c;
+            --formula-color: #9c27b0; 
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -28,7 +29,7 @@
             padding: 2.5rem 3rem;
             border-radius: 12px;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
-            max-width: 1200px;
+            max-width: 1200px; /* Kembali ke 4 kolom */
             margin: 0 auto;
             border: 1px solid #e0e0e0;
         }
@@ -53,6 +54,7 @@
         /* Drag & Drop Area */
         .drag-drop-area {
             display: grid;
+            /* BARU: Kembali ke 4 kolom */
             grid-template-columns: 1fr 1fr 1fr 1.2fr; 
             gap: 1.5rem;
             margin-top: 1.5rem;
@@ -64,8 +66,27 @@
         .drag-list { min-height: 450px; background: #f9f9f9; border-radius: 5px; padding: 0.5rem; border: 1px dashed #ddd; }
         .list-item { background: #fff; padding: 0.75rem 1rem; margin-bottom: 0.5rem; border: 1px solid #ddd; border-radius: 5px; cursor: grab; font-size: 0.9rem; font-weight: 500; }
         .list-item:active { cursor: grabbing; }
+        
         .target-list { border-color: var(--primary-color); background: #f4f9ff; }
         .target-list .list-item { background: #e6f2ff; border-color: var(--primary-color); }
+
+        /* BARU: Style untuk checkbox formula di dalam item */
+        .item-formula-toggle {
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px dashed #b3e5fc;
+        }
+        .item-formula-toggle label {
+            font-size: 0.85rem;
+            color: var(--formula-color);
+            font-weight: bold;
+            cursor: pointer;
+            margin-left: 0.25rem;
+        }
+        .item-formula-toggle input[type="checkbox"] {
+            cursor: pointer;
+        }
+
         .sortable-ghost { opacity: 0.4; background: #cce4ff; }
         .sortable-chosen { background: #aed6ff; }
 
@@ -74,13 +95,7 @@
         .search-input:focus { border-color: var(--primary-color); outline: none; box-shadow: 0 0 0 2px rgba(0,123,255,0.2); }
 
         /* Style untuk Toggle */
-        .toggle-container {
-            margin-top: 2rem;
-            margin-bottom: -0.5rem;
-            display: none;
-            text-align: right;
-            padding: 0.5rem;
-        }
+        .toggle-container { margin-top: 2rem; margin-bottom: -0.5rem; display: none; text-align: right; padding: 0.5rem; }
         .toggle-container label { margin-left: 0.5rem; font-weight: 500; color: var(--dark-text); cursor: pointer; font-size: 0.9rem; }
         .toggle-container input[type="checkbox"] { cursor: pointer; transform: scale(1.1); }
 
@@ -93,22 +108,15 @@
         .loading-text { color: var(--medium-text); margin-top: 0.75rem; font-size: 0.95rem; }
         @keyframes indeterminate-slide { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
-        /* BARU: Style untuk Copyright */
-        .copyright {
-            margin-top: 2.5rem; /* Beri jarak dari tombol */
-            margin-bottom: 0;
-            font-size: 0.85rem;
-            color: var(--medium-text);
-            text-align: center;
-        }
+        /* Copyright */
+        .copyright { margin-top: 2.5rem; margin-bottom: 0; font-size: 0.85rem; color: var(--medium-text); text-align: center; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>VLOOKUP Data Penagihan Debitur 🚀</h1>
+        <h1>VLOOKUP Lanjutan (3 File) 🚀</h1>
         <p>
             Unggah file Anda, seret kolom yang diinginkan untuk diurutkan, dan gabungkan datanya.
-            Kunci pencocokan: <strong>'BNI_CIF_KEY'</strong>.
         </p>
         
         <form id="upload-form">
@@ -169,7 +177,7 @@
         <button id="btn-generate">Proses & Unduh Laporan</button>
 
         <p class="copyright">
-            Copyright © 2025 [Zulkarnain Machmud/P052416 - Staff BCR BNI Gorontalo]. All rights reserved.
+            Copyright © 2025 [Nama Anda atau Nama Perusahaan Anda]. All rights reserved.
         </p>
     </div>
 
@@ -190,21 +198,17 @@
         const mainColsList = document.getElementById('main-cols-list');
         const lookupAColsList = document.getElementById('lookup-A-cols-list');
         const lookupBColsList = document.getElementById('lookup-B-cols-list');
-        const resultColsList = document.getElementById('result-cols-list');
+        const resultColsList = document.getElementById('result-cols-list'); // Kolom formula dihapus
 
         const searchLookupAInput = document.getElementById('search-lookup-A');
         const searchLookupBInput = document.getElementById('search-lookup-B');
 
-        // Ambil elemen toggle (NAMA VARIABEL DIUBAH)
         const toggleContainer = document.getElementById('toggle-container');
         const filterUnmatchedToggle = document.getElementById('filter-unmatched-cols');
 
-        // Variabel untuk menyimpan nama file sementara
         let tempFileMainName = '';
         let tempFileLookupAName = '';
         let tempFileLookupBName = '';
-        
-        // Variabel untuk menyimpan header file utama
         let mainColumnHeaders = [];
 
         // --- TAHAP 1: Inspeksi File (Baca Kolom) ---
@@ -238,20 +242,16 @@
                 tempFileMainName = data.fileMainName;
                 tempFileLookupAName = data.fileLookupAName;
                 tempFileLookupBName = data.fileLookupBName;
-
-                // Simpan header utama di cache
                 mainColumnHeaders = data.mainHeaders;
 
                 // Tampilkan daftar kolom
-                populateColumnList(mainColsList, data.mainHeaders, 'main');
-                populateColumnList(lookupAColsList, data.lookupAHeaders, 'lookupA');
-                populateColumnList(lookupBColsList, data.lookupBHeaders, 'lookupB');
+                populateSourceList(mainColsList, data.mainHeaders, 'main');
+                populateSourceList(lookupAColsList, data.lookupAHeaders, 'lookupA');
+                populateSourceList(lookupBColsList, data.lookupBHeaders, 'lookupB');
                 
-                initDragAndDrop();
+                initDragAndDrop(); // Inisialisasi 4 list
 
-                // Tampilkan toggle
                 toggleContainer.style.display = 'block';
-                
                 dragDropArea.style.display = 'grid';
                 btnGenerate.style.display = 'block';
                 btnInspect.disabled = true;
@@ -266,7 +266,7 @@
         // --- TAHAP 2: Generate Laporan (VLOOKUP) ---
         btnGenerate.addEventListener('click', async () => {
             showLoading(true, "Menggabungkan data...");
-            const orderedColumns = getSelectedColumns();
+            const orderedColumns = getSelectedColumns(); // Fungsi ini diperbarui
 
             if (orderedColumns.length === 0) {
                 showError('Harap seret setidaknya satu kolom ke "Kolom Hasil".');
@@ -317,11 +317,8 @@
         });
 
         // --- Event Listener untuk Pencarian dan Toggle ---
-        
-        // Event listener untuk toggle (VARIABEL DIUBAH)
         filterUnmatchedToggle.addEventListener('change', () => {
             const isChecked = filterUnmatchedToggle.checked;
-            // Panggil ulang filter untuk kedua list
             filterReferenceList(lookupAColsList, searchLookupAInput.value, isChecked);
             filterReferenceList(lookupBColsList, searchLookupBInput.value, isChecked);
         });
@@ -334,55 +331,73 @@
             filterReferenceList(lookupBColsList, searchLookupBInput.value, filterUnmatchedToggle.checked);
         });
         
-        // LOGIKA FILTER DIUBAH (DIBALIK)
         function filterReferenceList(listElement, searchTerm, isHideEnabled) {
             const normalizedSearch = searchTerm.toLowerCase();
             const items = listElement.querySelectorAll('.list-item');
-            
             items.forEach(item => {
-                const itemText = item.textContent;
+                const itemText = item.textContent; // textContent akan mengabaikan HTML checkbox
                 const itemTextLower = itemText.toLowerCase();
-
-                // Kondisi 1: Pencarian
                 const matchesSearch = itemTextLower.includes(normalizedSearch);
-
-                // Kondisi 2: Sembunyikan
-                // Cek apakah item ini ada di daftar header utama
                 const isMatchedInMain = mainColumnHeaders.includes(itemText);
                 const isKeyColumn = itemText === 'BNI_CIF_KEY';
-                
                 let shouldHide = false;
-                // Sembunyikan jika toggle dicentang DAN item TIDAK ADA di file utama
-                // (dan bukan kolom kunci)
                 if (isHideEnabled && !isMatchedInMain && !isKeyColumn) {
                     shouldHide = true;
                 }
-                
-                // Tampilkan HANYA jika lolos pencarian DAN tidak disembunyikan
-                if (matchesSearch && !shouldHide) {
-                    item.style.display = 'block';
-                } else {
-                    item.style.display = 'none';
-                }
+                item.style.display = (matchesSearch && !shouldHide) ? 'block' : 'none';
             });
         }
 
         // --- Helper Functions ---
-        function populateColumnList(listElement, headers, source) {
+        function populateSourceList(listElement, headers, source) {
             listElement.innerHTML = ''; 
             headers.forEach(header => {
-                const item = document.createElement('div');
-                item.className = 'list-item';
-                item.dataset.source = source;
-                item.dataset.column = header;
-                item.textContent = header;
-                
+                const item = createListItem(header, source);
                 if (header === 'BNI_CIF_KEY' && source === 'main') {
                     resultColsList.appendChild(item);
+                    // Langsung tambahkan checkbox jika itemnya STATUS
+                    if (item.dataset.column === 'STATUS') {
+                        addFormulaToggle(item);
+                    }
                 } else {
                     listElement.appendChild(item);
                 }
             });
+        }
+
+        function createListItem(text, source) {
+            const item = document.createElement('div');
+            item.className = 'list-item';
+            item.dataset.source = source;
+            item.dataset.column = text;
+            
+            // Simpan teks mentah di elemen terpisah untuk pencarian
+            const textNode = document.createElement('span');
+            textNode.textContent = text;
+            item.appendChild(textNode);
+            
+            return item;
+        }
+
+        // BARU: Fungsi untuk menambah checkbox ke item STATUS
+        function addFormulaToggle(item) {
+            const toggleDiv = document.createElement('div');
+            toggleDiv.className = 'item-formula-toggle';
+            
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            // Beri ID unik agar label berfungsi
+            const checkboxId = `formula-toggle-${new Date().getTime()}`;
+            checkbox.id = checkboxId;
+            checkbox.className = 'formula-checkbox'; // Class untuk diambil nilainya
+            
+            const label = document.createElement('label');
+            label.htmlFor = checkboxId;
+            label.textContent = 'Hitung otomatis (AMAN/TAGIH)';
+            
+            toggleDiv.appendChild(checkbox);
+            toggleDiv.appendChild(label);
+            item.appendChild(toggleDiv);
         }
 
         function initDragAndDrop() {
@@ -394,18 +409,47 @@
                 scrollSensitivity: 50,
                 scrollSpeed: 15
             };
+            
             new Sortable(mainColsList, sortableOptions);
             new Sortable(lookupAColsList, sortableOptions);
             new Sortable(lookupBColsList, sortableOptions);
-            new Sortable(resultColsList, sortableOptions);
+            
+            // BARU: Tambahkan event 'onAdd' untuk list hasil
+            new Sortable(resultColsList, {
+                ...sortableOptions, // Salin semua opsi
+                onAdd: function (evt) {
+                    // Cek jika item yang baru ditambah adalah STATUS
+                    if (evt.item.dataset.column === 'STATUS') {
+                        addFormulaToggle(evt.item);
+                    }
+                },
+                onRemove: function (evt) {
+                    // (Opsional) Hapus checkbox jika item dikembalikan
+                    const toggle = evt.item.querySelector('.item-formula-toggle');
+                    if (toggle) {
+                        toggle.remove();
+                    }
+                }
+            });
         }
 
+        // BARU: Diperbarui untuk membaca checkbox
         function getSelectedColumns() {
             const items = resultColsList.querySelectorAll('.list-item');
-            return Array.from(items).map(item => ({
-                source: item.dataset.source,
-                column: item.dataset.column
-            }));
+            return Array.from(items).map(item => {
+                const columnData = {
+                    source: item.dataset.source,
+                    column: item.dataset.column
+                };
+                
+                // Cek jika item ini punya checkbox formula
+                const formulaCheckbox = item.querySelector('.formula-checkbox');
+                if (formulaCheckbox) {
+                    columnData.useFormula = formulaCheckbox.checked;
+                }
+                
+                return columnData;
+            });
         }
 
         function showLoading(isLoading, message = "Memproses file, mohon tunggu... ⏳") {
@@ -425,7 +469,6 @@
             btnGenerate.style.display = 'none';
             btnInspect.disabled = false;
             
-            // Reset toggle dan cache (VARIABEL DIUBAH)
             toggleContainer.style.display = 'none';
             filterUnmatchedToggle.checked = false;
             mainColumnHeaders = [];
@@ -440,7 +483,6 @@
             searchLookupAInput.value = '';
             searchLookupBInput.value = '';
         }
-
     </script>
 </body>
 </html>
