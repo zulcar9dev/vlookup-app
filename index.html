@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aplikasi VLOOKUP Lanjutan</title>
+    <title>Aplikasi VLOOKUP Data Penagihan</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 
@@ -29,7 +29,7 @@
             padding: 2.5rem 3rem;
             border-radius: 12px;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
-            max-width: 1200px; /* Kembali ke 4 kolom */
+            max-width: 1200px;
             margin: 0 auto;
             border: 1px solid #e0e0e0;
         }
@@ -52,15 +52,7 @@
         #btn-generate:hover { background-color: #4a9d4a; }
         
         /* Drag & Drop Area */
-        .drag-drop-area {
-            display: grid;
-            /* BARU: Kembali ke 4 kolom */
-            grid-template-columns: 1fr 1fr 1fr 1.2fr; 
-            gap: 1.5rem;
-            margin-top: 1.5rem;
-            display: none;
-            align-items: start;
-        }
+        .drag-drop-area { display: grid; grid-template-columns: 1fr 1fr 1fr 1.2fr; gap: 1.5rem; margin-top: 1.5rem; display: none; align-items: start; }
         .drag-list-container { background: #fdfdfd; border: 1px solid #eee; border-radius: 8px; padding: 1rem; }
         .drag-list-container h3 { margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 0.5rem; }
         .drag-list { min-height: 450px; background: #f9f9f9; border-radius: 5px; padding: 0.5rem; border: 1px dashed #ddd; }
@@ -70,34 +62,38 @@
         .target-list { border-color: var(--primary-color); background: #f4f9ff; }
         .target-list .list-item { background: #e6f2ff; border-color: var(--primary-color); }
 
-        /* BARU: Style untuk checkbox formula di dalam item */
-        .item-formula-toggle {
-            margin-top: 0.5rem;
-            padding-top: 0.5rem;
-            border-top: 1px dashed #b3e5fc;
-        }
-        .item-formula-toggle label {
-            font-size: 0.85rem;
-            color: var(--formula-color);
-            font-weight: bold;
-            cursor: pointer;
-            margin-left: 0.25rem;
-        }
-        .item-formula-toggle input[type="checkbox"] {
-            cursor: pointer;
-        }
+        .item-formula-toggle { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed #b3e5fc; }
+        .item-formula-toggle label { font-size: 0.85rem; color: var(--formula-color); font-weight: bold; cursor: pointer; margin-left: 0.25rem; }
+        .item-formula-toggle input[type="checkbox"] { cursor: pointer; }
 
         .sortable-ghost { opacity: 0.4; background: #cce4ff; }
         .sortable-chosen { background: #aed6ff; }
 
-        /* Style untuk input pencarian */
         .search-input { width: 100%; padding: 0.5rem 0.75rem; margin-bottom: 0.75rem; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
         .search-input:focus { border-color: var(--primary-color); outline: none; box-shadow: 0 0 0 2px rgba(0,123,255,0.2); }
-
-        /* Style untuk Toggle */
-        .toggle-container { margin-top: 2rem; margin-bottom: -0.5rem; display: none; text-align: right; padding: 0.5rem; }
-        .toggle-container label { margin-left: 0.5rem; font-weight: 500; color: var(--dark-text); cursor: pointer; font-size: 0.9rem; }
-        .toggle-container input[type="checkbox"] { cursor: pointer; transform: scale(1.1); }
+        
+        /* Toggle internal (Auto-Match & Filter) */
+        .auto-match-toggle, .filter-toggle {
+            display: none; /* Sembunyi awalnya */
+            margin-bottom: 0.75rem;
+            padding: 0.5rem;
+            border-radius: 4px;
+        }
+        .auto-match-toggle { background: #f0f7ff; }
+        .filter-toggle { background: #f9f9f9; border: 1px dashed #ddd; }
+        
+        .auto-match-toggle label, .filter-toggle label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            margin-left: 0.25rem;
+        }
+        .auto-match-toggle label { color: var(--secondary-color); }
+        .filter-toggle label { color: var(--medium-text); }
+        
+        .auto-match-toggle input[type="checkbox"], .filter-toggle input[type="checkbox"] { 
+            cursor: pointer; 
+        }
 
         /* Status & Loading */
         .status-container { margin-top: 1.5rem; text-align: center; }
@@ -110,13 +106,38 @@
 
         /* Copyright */
         .copyright { margin-top: 2.5rem; margin-bottom: 0; font-size: 0.85rem; color: var(--medium-text); text-align: center; }
+
+/* ... (kode CSS Anda yang sudah ada) ... */
+
+    /* BARU: Style untuk Teks Berjalan (Marquee) */
+    .marquee {
+        overflow: hidden;
+        white-space: nowrap;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .marquee span {
+        display: inline-block;
+        padding-left: 100%; /* Mendorong teks mulai dari luar layar kanan */
+        animation: marquee-scroll 25s linear infinite; /* Atur kecepatan di sini (25 detik) */
+    }
+
+    /* Animasi yang menggerakkan teks */
+    @keyframes marquee-scroll {
+        0%   { transform: translateX(0); }
+        100% { transform: translateX(-100%); } /* Pindahkan teks ke kiri sejauh 100% lebarnya */
+    }
+
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>VLOOKUP Lanjutan (3 File) 🚀</h1>
-        <p>
-            Unggah file Anda, seret kolom yang diinginkan untuk diurutkan, dan gabungkan datanya.
+        <h1>Aplikasi VLOOKUP Data Penagihan 🚀</h1>
+        <p class="marquee">
+            <span>
+            Unggah file Anda, seret kolom yang diinginkan untuk diurutkan, dan gabungkan datanya. 
+            Pencocokan Data adalah <strong>BNI_CIF_KEY</strong> pada <strong>Sheet1</strong> di masing-masing file utama dan file referensi.
+            </span>
         </p>
         
         <form id="upload-form">
@@ -148,11 +169,6 @@
             <div id="error-message"></div>
         </div>
 
-        <div class="toggle-container" id="toggle-container">
-            <input type="checkbox" id="filter-unmatched-cols">
-            <label for="filter-unmatched-cols">Sembunyikan kolom yang tidak ada di file utama</label>
-        </div>
-
         <div class="drag-drop-area" id="drag-drop-area">
             <div class="drag-list-container">
                 <h3>Kolom File Utama</h3>
@@ -160,11 +176,27 @@
             </div>
             <div class="drag-list-container">
                 <h3>Kolom Referensi A</h3>
+                <div class="filter-toggle" id="filter-toggle-A">
+                    <input type="checkbox" id="filter-unmatched-A">
+                    <label for="filter-unmatched-A">Sembunyikan yg tdk cocok</label>
+                </div>
+                <div class="auto-match-toggle" id="auto-match-toggle-A">
+                    <input type="checkbox" id="auto-match-A">
+                    <label for="auto-match-A">Otomatis tambahkan yg cocok</label>
+                </div>
                 <input type="search" id="search-lookup-A" class="search-input" placeholder="Cari kolom...">
                 <div id="lookup-A-cols-list" class="drag-list"></div>
             </div>
             <div class="drag-list-container">
                 <h3>Kolom Referensi B</h3>
+                <div class="filter-toggle" id="filter-toggle-B">
+                    <input type="checkbox" id="filter-unmatched-B">
+                    <label for="filter-unmatched-B">Sembunyikan yg tdk cocok</label>
+                </div>
+                <div class="auto-match-toggle" id="auto-match-toggle-B">
+                    <input type="checkbox" id="auto-match-B">
+                    <label for="auto-match-B">Otomatis tambahkan yg cocok</label>
+                </div>
                 <input type="search" id="search-lookup-B" class="search-input" placeholder="Cari kolom...">
                 <div id="lookup-B-cols-list" class="drag-list"></div>
             </div>
@@ -177,7 +209,7 @@
         <button id="btn-generate">Proses & Unduh Laporan</button>
 
         <p class="copyright">
-            Copyright © 2025 [Nama Anda atau Nama Perusahaan Anda]. All rights reserved.
+            Copyright © 2025 Zulkarnain Machmud / P052416 - BCR Staff BNI Gorontalo . All rights reserved.
         </p>
     </div>
 
@@ -198,13 +230,21 @@
         const mainColsList = document.getElementById('main-cols-list');
         const lookupAColsList = document.getElementById('lookup-A-cols-list');
         const lookupBColsList = document.getElementById('lookup-B-cols-list');
-        const resultColsList = document.getElementById('result-cols-list'); // Kolom formula dihapus
+        const resultColsList = document.getElementById('result-cols-list');
 
         const searchLookupAInput = document.getElementById('search-lookup-A');
         const searchLookupBInput = document.getElementById('search-lookup-B');
 
-        const toggleContainer = document.getElementById('toggle-container');
-        const filterUnmatchedToggle = document.getElementById('filter-unmatched-cols');
+        const autoMatchToggleDivA = document.getElementById('auto-match-toggle-A');
+        const autoMatchToggleA = document.getElementById('auto-match-A');
+        const autoMatchToggleDivB = document.getElementById('auto-match-toggle-B');
+        const autoMatchToggleB = document.getElementById('auto-match-B');
+        
+        const filterToggleDivA = document.getElementById('filter-toggle-A');
+        const filterToggleA = document.getElementById('filter-unmatched-A');
+        const filterToggleDivB = document.getElementById('filter-toggle-B');
+        const filterToggleB = document.getElementById('filter-unmatched-B');
+
 
         let tempFileMainName = '';
         let tempFileLookupAName = '';
@@ -244,14 +284,17 @@
                 tempFileLookupBName = data.fileLookupBName;
                 mainColumnHeaders = data.mainHeaders;
 
-                // Tampilkan daftar kolom
                 populateSourceList(mainColsList, data.mainHeaders, 'main');
                 populateSourceList(lookupAColsList, data.lookupAHeaders, 'lookupA');
                 populateSourceList(lookupBColsList, data.lookupBHeaders, 'lookupB');
                 
-                initDragAndDrop(); // Inisialisasi 4 list
+                initDragAndDrop();
 
-                toggleContainer.style.display = 'block';
+                autoMatchToggleDivA.style.display = 'block';
+                autoMatchToggleDivB.style.display = 'block';
+                filterToggleDivA.style.display = 'block';
+                filterToggleDivB.style.display = 'block';
+                
                 dragDropArea.style.display = 'grid';
                 btnGenerate.style.display = 'block';
                 btnInspect.disabled = true;
@@ -264,20 +307,19 @@
         });
 
         // --- TAHAP 2: Generate Laporan (VLOOKUP) ---
+        // (Tidak ada perubahan di sini)
         btnGenerate.addEventListener('click', async () => {
             showLoading(true, "Menggabungkan data...");
-            const orderedColumns = getSelectedColumns(); // Fungsi ini diperbarui
+            const orderedColumns = getSelectedColumns();
 
             if (orderedColumns.length === 0) {
                 showError('Harap seret setidaknya satu kolom ke "Kolom Hasil".');
-                showLoading(false);
-                return;
+                showLoading(false); return;
             }
             const hasMainKey = orderedColumns.some(col => col.source === 'main' && col.column === 'BNI_CIF_KEY');
             if (!hasMainKey) {
                 showError("Kolom 'BNI_CIF_KEY' dari File Utama wajib ada di 'Kolom Hasil'.");
-                showLoading(false);
-                return;
+                showLoading(false); return;
             }
 
             try {
@@ -316,26 +358,102 @@
             }
         });
 
-        // --- Event Listener untuk Pencarian dan Toggle ---
-        filterUnmatchedToggle.addEventListener('change', () => {
-            const isChecked = filterUnmatchedToggle.checked;
-            filterReferenceList(lookupAColsList, searchLookupAInput.value, isChecked);
-            filterReferenceList(lookupBColsList, searchLookupBInput.value, isChecked);
+        // --- Event Listener untuk Pencarian, Toggle, dan Auto-Match ---
+        
+        filterToggleA.addEventListener('change', () => {
+            filterReferenceList(lookupAColsList, searchLookupAInput.value, filterToggleA.checked);
+        });
+        filterToggleB.addEventListener('change', () => {
+            filterReferenceList(lookupBColsList, searchLookupBInput.value, filterToggleB.checked);
         });
         
         searchLookupAInput.addEventListener('input', () => {
-            filterReferenceList(lookupAColsList, searchLookupAInput.value, filterUnmatchedToggle.checked);
+            filterReferenceList(lookupAColsList, searchLookupAInput.value, filterToggleA.checked);
         });
-        
         searchLookupBInput.addEventListener('input', () => {
-            filterReferenceList(lookupBColsList, searchLookupBInput.value, filterUnmatchedToggle.checked);
+            filterReferenceList(lookupBColsList, searchLookupBInput.value, filterToggleB.checked);
         });
+
+        // BARU: Listener Auto-Match A sekarang punya 'else'
+        autoMatchToggleA.addEventListener('change', () => {
+            if (autoMatchToggleA.checked) {
+                // Logika "Centang" (yang sudah ada)
+                showLoading(true, "Mencocokkan kolom A...");
+                autoMatchColumns(lookupAColsList);
+                sortResultList();
+                showLoading(false);
+            } else {
+                // Logika "Uncheck" (BARU)
+                showLoading(true, "Menghapus kolom A...");
+                removeAutoMatchedColumns(lookupAColsList, 'lookupA');
+                sortResultList(); // Urutkan ulang 'Hasil' setelah dihapus
+                // Terapkan kembali filter ke list 'Ref A'
+                filterReferenceList(lookupAColsList, searchLookupAInput.value, filterToggleA.checked);
+                showLoading(false);
+            }
+        });
+
+        // BARU: Listener Auto-Match B sekarang punya 'else'
+        autoMatchToggleB.addEventListener('change', () => {
+            if (autoMatchToggleB.checked) {
+                // Logika "Centang" (yang sudah ada)
+                showLoading(true, "Mencocokkan kolom B...");
+                autoMatchColumns(lookupBColsList);
+                sortResultList();
+                showLoading(false);
+            } else {
+                // Logika "Uncheck" (BARU)
+                showLoading(true, "Menghapus kolom B...");
+                removeAutoMatchedColumns(lookupBColsList, 'lookupB');
+                sortResultList(); // Urutkan ulang 'Hasil' setelah dihapus
+                // Terapkan kembali filter ke list 'Ref B'
+                filterReferenceList(lookupBColsList, searchLookupBInput.value, filterToggleB.checked);
+                showLoading(false);
+            }
+        });
+
+        // Helper untuk logika auto-match
+        function autoMatchColumns(sourceListElement) {
+            const existingResultNames = getSelectedColumns().map(c => c.column);
+            mainColumnHeaders.forEach(colName => {
+                if (existingResultNames.includes(colName) || colName === 'BNI_CIF_KEY') {
+                    return; 
+                }
+                let itemToMove = sourceListElement.querySelector(`.list-item[data-column="${colName}"]`);
+                if (itemToMove) {
+                    resultColsList.appendChild(itemToMove);
+                    if (colName === 'STATUS') {
+                        addFormulaToggle(itemToMove);
+                    }
+                }
+            });
+        }
+
+        // BARU: Helper untuk MENGHAPUS kolom auto-match
+        function removeAutoMatchedColumns(sourceListElement, sourceName) {
+            // Ambil semua item dari 'Kolom Hasil'
+            const items = Array.from(resultColsList.querySelectorAll('.list-item'));
+            
+            items.forEach(item => {
+                // Kondisi: sumbernya sama (misal 'lookupA'), TAPI bukan kunci utama
+                if (item.dataset.source === sourceName && item.dataset.column !== 'BNI_CIF_KEY') {
+                    // Hapus toggle formula jika ada (seperti onRemove)
+                    const toggle = item.querySelector('.item-formula-toggle');
+                    if (toggle) {
+                        toggle.remove();
+                    }
+                    // Kembalikan ke list asalnya
+                    sourceListElement.appendChild(item);
+                }
+            });
+        }
         
+        // Helper untuk filter
         function filterReferenceList(listElement, searchTerm, isHideEnabled) {
             const normalizedSearch = searchTerm.toLowerCase();
             const items = listElement.querySelectorAll('.list-item');
             items.forEach(item => {
-                const itemText = item.textContent; // textContent akan mengabaikan HTML checkbox
+                const itemText = item.querySelector('span').textContent;
                 const itemTextLower = itemText.toLowerCase();
                 const matchesSearch = itemTextLower.includes(normalizedSearch);
                 const isMatchedInMain = mainColumnHeaders.includes(itemText);
@@ -349,13 +467,27 @@
         }
 
         // --- Helper Functions ---
+
+        // Helper untuk mengurutkan Kolom Hasil
+        function sortResultList() {
+            const orderMap = new Map(mainColumnHeaders.map((colName, index) => [colName, index]));
+            const items = Array.from(resultColsList.querySelectorAll('.list-item'));
+            items.sort((a, b) => {
+                const colA = a.dataset.column;
+                const colB = b.dataset.column;
+                const orderA = orderMap.has(colA) ? orderMap.get(colA) : 999;
+                const orderB = orderMap.has(colB) ? orderMap.get(colB) : 999;
+                return orderA - orderB;
+            });
+            items.forEach(item => resultColsList.appendChild(item));
+        }
+
         function populateSourceList(listElement, headers, source) {
             listElement.innerHTML = ''; 
             headers.forEach(header => {
                 const item = createListItem(header, source);
                 if (header === 'BNI_CIF_KEY' && source === 'main') {
                     resultColsList.appendChild(item);
-                    // Langsung tambahkan checkbox jika itemnya STATUS
                     if (item.dataset.column === 'STATUS') {
                         addFormulaToggle(item);
                     }
@@ -370,31 +502,24 @@
             item.className = 'list-item';
             item.dataset.source = source;
             item.dataset.column = text;
-            
-            // Simpan teks mentah di elemen terpisah untuk pencarian
             const textNode = document.createElement('span');
             textNode.textContent = text;
             item.appendChild(textNode);
-            
             return item;
         }
 
-        // BARU: Fungsi untuk menambah checkbox ke item STATUS
         function addFormulaToggle(item) {
+            if (item.querySelector('.item-formula-toggle')) return;
             const toggleDiv = document.createElement('div');
             toggleDiv.className = 'item-formula-toggle';
-            
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
-            // Beri ID unik agar label berfungsi
-            const checkboxId = `formula-toggle-${new Date().getTime()}`;
+            const checkboxId = `formula-${item.dataset.column}-${Math.random()}`;
             checkbox.id = checkboxId;
-            checkbox.className = 'formula-checkbox'; // Class untuk diambil nilainya
-            
+            checkbox.className = 'formula-checkbox';
             const label = document.createElement('label');
             label.htmlFor = checkboxId;
             label.textContent = 'Hitung otomatis (AMAN/TAGIH)';
-            
             toggleDiv.appendChild(checkbox);
             toggleDiv.appendChild(label);
             item.appendChild(toggleDiv);
@@ -414,17 +539,14 @@
             new Sortable(lookupAColsList, sortableOptions);
             new Sortable(lookupBColsList, sortableOptions);
             
-            // BARU: Tambahkan event 'onAdd' untuk list hasil
             new Sortable(resultColsList, {
-                ...sortableOptions, // Salin semua opsi
+                ...sortableOptions,
                 onAdd: function (evt) {
-                    // Cek jika item yang baru ditambah adalah STATUS
                     if (evt.item.dataset.column === 'STATUS') {
                         addFormulaToggle(evt.item);
                     }
                 },
                 onRemove: function (evt) {
-                    // (Opsional) Hapus checkbox jika item dikembalikan
                     const toggle = evt.item.querySelector('.item-formula-toggle');
                     if (toggle) {
                         toggle.remove();
@@ -433,7 +555,6 @@
             });
         }
 
-        // BARU: Diperbarui untuk membaca checkbox
         function getSelectedColumns() {
             const items = resultColsList.querySelectorAll('.list-item');
             return Array.from(items).map(item => {
@@ -441,13 +562,10 @@
                     source: item.dataset.source,
                     column: item.dataset.column
                 };
-                
-                // Cek jika item ini punya checkbox formula
                 const formulaCheckbox = item.querySelector('.formula-checkbox');
                 if (formulaCheckbox) {
                     columnData.useFormula = formulaCheckbox.checked;
                 }
-                
                 return columnData;
             });
         }
@@ -469,10 +587,19 @@
             btnGenerate.style.display = 'none';
             btnInspect.disabled = false;
             
-            toggleContainer.style.display = 'none';
-            filterUnmatchedToggle.checked = false;
-            mainColumnHeaders = [];
+            autoMatchToggleDivA.style.display = 'none';
+            autoMatchToggleA.checked = false;
+            autoMatchToggleA.disabled = false;
+            autoMatchToggleDivB.style.display = 'none';
+            autoMatchToggleB.checked = false;
+            autoMatchToggleB.disabled = false;
+            
+            filterToggleDivA.style.display = 'none';
+            filterToggleA.checked = false;
+            filterToggleDivB.style.display = 'none';
+            filterToggleB.checked = false;
 
+            mainColumnHeaders = [];
             tempFileMainName = '';
             tempFileLookupAName = '';
             tempFileLookupBName = '';
