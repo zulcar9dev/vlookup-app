@@ -1,0 +1,20 @@
+{
+    // Menggunakan gambar dasar dari Microsoft
+    "image": "mcr.microsoft.com/devcontainers/universal:latest",
+
+    // Ini adalah bagian PENTING untuk Nginx
+    "portsAttributes": {
+        "3000": { // Ini adalah port yang digunakan server.js kita
+            "label": "VLookup App",
+            "onAutoForward": "openBrowser",
+            "serverProperties": {
+                // INI SOLUSINYA: menaikkan batas unggahan ke 100MB
+                "client_max_body_size": "100m" 
+            }
+        }
+    },
+
+    // INI BONUS: Perintah ini akan OTOMATIS berjalan setiap kali
+    // Codespace Anda dibuat atau dibangun ulang.
+    "postCreateCommand": "npm install && mkdir -p uploads"
+}
