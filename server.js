@@ -27,6 +27,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // Helper function untuk membaca header
+// !!! PERUBAHAN UTAMA DI SINI !!!
 function getHeaders(filePath) {
     try {
         const workbook = xlsx.readFile(filePath);
@@ -35,7 +36,17 @@ function getHeaders(filePath) {
         if (!worksheet) return [];
         
         const data = xlsx.utils.sheet_to_json(worksheet, { header: 1, range: 0 });
-        return (data.length > 0) ? data[0] : [];
+        
+        if (data.length > 0 && data[0]) {
+            // BARU: Membersihkan (trim) spasi dari setiap nama header
+            return data[0].map(header => {
+                if (typeof header === 'string') {
+                    return header.trim(); // Menghapus spasi di awal/akhir
+                }
+                return header; // Kembalikan apa adanya (jika angka atau null)
+            });
+        }
+        return [];
     } catch (e) {
         console.error("Gagal membaca header:", e);
         return [];
@@ -51,7 +62,7 @@ app.get('/', (req, res) => {
 
 /**
  * ENDPOINT 1: INSPEKSI FILE
- * (Tidak ada perubahan)
+ * (Tidak ada perubahan, tapi sekarang menggunakan getHeaders yang baru)
  */
 app.post('/inspect-files', upload.fields([
     { name: 'fileMain', maxCount: 1 },
@@ -72,9 +83,12 @@ app.post('/inspect-files', upload.fields([
     const lookupBHeaders = getHeaders(fileLookupBPath);
 
     if (mainHeaders.length === 0 || lookupAHeaders.length === 0 || lookupBHeaders.length === 0) {
-        fs.unlinkSync(fileMainPath);
-        fs.unlinkSync(fileLookupAPath);
-        fs.unlinkSync(fileLookupBPath);
+        // Hapus file jika gagal baca header
+        try {
+            fs.unlinkSync(fileMainPath);
+            fs.unlinkSync(fileLookupAPath);
+            fs.unlinkSync(fileLookupBPath);
+        } catch (e) { console.error("Gagal hapus file:", e); }
         return res.status(400).json({ error: 'Gagal membaca header dari satu atau lebih file.' });
     }
 
@@ -90,10 +104,9 @@ app.post('/inspect-files', upload.fields([
 
 /**
  * ENDPOINT 2: PROSES VLOOKUP & GENERATE
- * !!! PERUBAHAN UTAMA DI SINI !!!
+ * (Tidak ada perubahan di sini)
  */
 app.post('/generate-report', async (req, res) => {
-    // Terima 'orderedColumns' (sekarang memiliki properti 'useFormula')
     const { fileMainName, fileLookupAName, fileLookupBName, orderedColumns } = req.body;
 
     if (!fileMainName || !fileLookupAName || !fileLookupBName || !orderedColumns || orderedColumns.length === 0) {
@@ -121,12 +134,14 @@ app.post('/generate-report', async (req, res) => {
         // --- Optimasi VLOOKUP (membuat 2 Map) ---
         const lookupMapA = new Map();
         for (const row of sheet2DataA) {
-            const key = row[KEY_COLUMN];
+            // BERSIHKAN KUNCI SAAT MEMBUAT MAP
+            const key = (row[KEY_COLUMN] && typeof row[KEY_COLUMN] === 'string') ? row[KEY_COLUMN].trim() : row[KEY_COLUMN];
             if (key) lookupMapA.set(key, row);
         }
         const lookupMapB = new Map();
         for (const row of sheet2DataB) {
-            const key = row[KEY_COLUMN];
+            // BERSIHKAN KUNCI SAAT MEMBUAT MAP
+            const key = (row[KEY_COLUMN] && typeof row[KEY_COLUMN] === 'string') ? row[KEY_COLUMN].trim() : row[KEY_COLUMN];
             if (key) lookupMapB.set(key, row);
         }
 
@@ -134,7 +149,10 @@ app.post('/generate-report', async (req, res) => {
         const combinedData = [];
 
         for (const rowSheet1 of sheet1Data) {
-            const lookupValue = rowSheet1[KEY_COLUMN];
+            // BERSIHKAN KUNCI SAAT MENCARI
+            const lookupValueRaw = rowSheet1[KEY_COLUMN];
+            const lookupValue = (lookupValueRaw && typeof lookupValueRaw === 'string') ? lookupValueRaw.trim() : lookupValueRaw;
+            
             const matchSheetA = lookupMapA.get(lookupValue);
             const matchSheetB = lookupMapB.get(lookupValue);
 
@@ -149,8 +167,8 @@ app.post('/generate-report', async (req, res) => {
                 ? matchSheetA.Total_Kewajiban_New
                 : (matchSheetB && matchSheetB.Total_Kewajiban_New);
 
-            const saldoNum = parseFloat(saldo) || 0;
-            const kewajibanNum = parseFloat(kewajiban) || 0;
+            const saldoNum = parseFloat(String(saldo).replace(/,/g, '')) || 0;
+            const kewajibanNum = parseFloat(String(kewajiban).replace(/,/g, '')) || 0;
 
             if (saldoNum > kewajibanNum) {
                 calculatedStatus = "AMAN";
@@ -159,13 +177,11 @@ app.post('/generate-report', async (req, res) => {
 
             // === Loop melalui kolom pilihan pengguna ===
             for (const colInfo of orderedColumns) {
-                const colName = colInfo.column;
+                const colName = colInfo.column; // colName ini sudah di-trim dari frontend
 
-                // BARU: Cek formula DULUAN
                 if (colInfo.column === 'STATUS' && colInfo.useFormula === true) {
                     newRow[colName] = calculatedStatus;
                 
-                // Jika tidak, baru cek sumber aslinya
                 } else if (colInfo.source === 'main') {
                     newRow[colName] = rowSheet1[colName];
                 
@@ -203,9 +219,12 @@ app.post('/generate-report', async (req, res) => {
         console.error(error);
         res.status(500).json({ error: 'Terjadi error internal saat memproses file: ' + error.message });
     } finally {
-        fs.unlinkSync(fileMainPath);
-        fs.unlinkSync(fileLookupAPath);
-        fs.unlinkSync(fileLookupBPath);
+        // --- PENTING: Hapus file sementara ---
+        try {
+            fs.unlinkSync(fileMainPath);
+            fs.unlinkSync(fileLookupAPath);
+            fs.unlinkSync(fileLookupBPath);
+        } catch(e) { console.error("Gagal hapus file:", e); }
     }
 });
 
