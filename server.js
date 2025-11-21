@@ -1,4 +1,5 @@
 // 1. Impor Pustaka
+const { exec } = require('child_process');
 const express = require('express');
 const multer = require('multer');
 const xlsx = require('xlsx');
@@ -229,6 +230,9 @@ app.post('/generate-report', async (req, res) => {
 });
 
 // 4. Jalankan Server
-app.listen(port, () => {
-    console.log(`Server berjalan di http://localhost:${port}`);
+app.listen(3000, () => {
+  console.log('Server berjalan di http://localhost:3000');
+  
+  // Perintah ajaib untuk membuka browser otomatis di Windows
+  exec('explorer "http://localhost:3000"'); 
 });
