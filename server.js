@@ -15,11 +15,14 @@ app.use(express.json());
 const KEY_COLUMN = 'BNI_CIF_KEY'; 
 // ==========================
 
-// Konfigurasi Multer
+// Buat folder uploads jika belum ada
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir);
+}
+
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/');
-    },
+    destination: (req, file, cb) => { cb(null, 'uploads/'); },
     filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
         cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
@@ -27,212 +30,192 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// Helper function untuk membaca header
-// !!! PERUBAHAN UTAMA DI SINI !!!
+// Helper: Normalisasi Key (PENTING: Memaksa jadi String agar 100% cocok)
+function normalizeKey(value) {
+    if (value === undefined || value === null) return null;
+    return String(value).trim(); // Paksa jadi string dan hapus spasi
+}
+
+// Helper: Baca Header
 function getHeaders(filePath) {
     try {
         const workbook = xlsx.readFile(filePath);
         const sheetName = workbook.SheetNames[0]; 
         const worksheet = workbook.Sheets[sheetName];
         if (!worksheet) return [];
-        
         const data = xlsx.utils.sheet_to_json(worksheet, { header: 1, range: 0 });
-        
         if (data.length > 0 && data[0]) {
-            // BARU: Membersihkan (trim) spasi dari setiap nama header
-            return data[0].map(header => {
-                if (typeof header === 'string') {
-                    return header.trim(); // Menghapus spasi di awal/akhir
-                }
-                return header; // Kembalikan apa adanya (jika angka atau null)
-            });
+            return data[0].map(h => (typeof h === 'string' ? h.trim() : h));
         }
         return [];
-    } catch (e) {
-        console.error("Gagal membaca header:", e);
-        return [];
-    }
+    } catch (e) { return []; }
 }
 
-// 3. Rute (Routes)
+// 3. Rute
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
-// Rute utama (GET /)
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-/**
- * ENDPOINT 1: INSPEKSI FILE
- * (Tidak ada perubahan, tapi sekarang menggunakan getHeaders yang baru)
- */
 app.post('/inspect-files', upload.fields([
     { name: 'fileMain', maxCount: 1 },
     { name: 'fileLookupA', maxCount: 1 },
     { name: 'fileLookupB', maxCount: 1 }
 ]), (req, res) => {
-    
     if (!req.files || !req.files.fileMain || !req.files.fileLookupA || !req.files.fileLookupB) {
         return res.status(400).json({ error: 'Harap unggah ketiga file.' });
     }
+    const paths = [req.files.fileMain[0].path, req.files.fileLookupA[0].path, req.files.fileLookupB[0].path];
+    const headers = paths.map(p => getHeaders(p));
 
-    const fileMainPath = req.files.fileMain[0].path;
-    const fileLookupAPath = req.files.fileLookupA[0].path;
-    const fileLookupBPath = req.files.fileLookupB[0].path;
-
-    const mainHeaders = getHeaders(fileMainPath);
-    const lookupAHeaders = getHeaders(fileLookupAPath);
-    const lookupBHeaders = getHeaders(fileLookupBPath);
-
-    if (mainHeaders.length === 0 || lookupAHeaders.length === 0 || lookupBHeaders.length === 0) {
-        // Hapus file jika gagal baca header
-        try {
-            fs.unlinkSync(fileMainPath);
-            fs.unlinkSync(fileLookupAPath);
-            fs.unlinkSync(fileLookupBPath);
-        } catch (e) { console.error("Gagal hapus file:", e); }
-        return res.status(400).json({ error: 'Gagal membaca header dari satu atau lebih file.' });
+    if (headers.some(h => h.length === 0)) {
+        paths.forEach(p => { if (fs.existsSync(p)) fs.unlinkSync(p); });
+        return res.status(400).json({ error: 'Gagal membaca file.' });
     }
 
     res.json({
-        mainHeaders: mainHeaders,
-        lookupAHeaders: lookupAHeaders,
-        lookupBHeaders: lookupBHeaders,
+        mainHeaders: headers[0],
+        lookupAHeaders: headers[1],
+        lookupBHeaders: headers[2],
         fileMainName: req.files.fileMain[0].filename, 
         fileLookupAName: req.files.fileLookupA[0].filename,
         fileLookupBName: req.files.fileLookupB[0].filename 
     });
 });
 
-/**
- * ENDPOINT 2: PROSES VLOOKUP & GENERATE
- * (Tidak ada perubahan di sini)
- */
 app.post('/generate-report', async (req, res) => {
     const { fileMainName, fileLookupAName, fileLookupBName, orderedColumns } = req.body;
+    if (!fileMainName) return res.status(400).json({ error: 'Data tidak lengkap.' });
 
-    if (!fileMainName || !fileLookupAName || !fileLookupBName || !orderedColumns || orderedColumns.length === 0) {
-        return res.status(400).json({ error: 'Data tidak lengkap untuk generate laporan.' });
-    }
+    const paths = {
+        main: path.join(__dirname, 'uploads', fileMainName),
+        lookupA: path.join(__dirname, 'uploads', fileLookupAName),
+        lookupB: path.join(__dirname, 'uploads', fileLookupBName)
+    };
 
-    const fileMainPath = path.join(__dirname, 'uploads', fileMainName);
-    const fileLookupAPath = path.join(__dirname, 'uploads', fileLookupAName);
-    const fileLookupBPath = path.join(__dirname, 'uploads', fileLookupBName);
-    
-    if (!fs.existsSync(fileMainPath) || !fs.existsSync(fileLookupAPath) || !fs.existsSync(fileLookupBPath)) {
-        return res.status(400).json({ error: 'Sesi file tidak ditemukan. Harap unggah ulang file.' });
-    }
+    if (!fs.existsSync(paths.main)) return res.status(400).json({ error: 'File kedaluwarsa.' });
 
     try {
-        // --- Membaca 3 File Excel ---
-        const wbMain = xlsx.readFile(fileMainPath);
-        const wbLookupA = xlsx.readFile(fileLookupAPath);
-        const wbLookupB = xlsx.readFile(fileLookupBPath);
+        // 1. Baca File
+        const wbMain = xlsx.readFile(paths.main);
+        const wbLookupA = xlsx.readFile(paths.lookupA);
+        const wbLookupB = xlsx.readFile(paths.lookupB);
 
-        const sheet1Data = xlsx.utils.sheet_to_json(wbMain.Sheets[wbMain.SheetNames[0]]);
-        const sheet2DataA = xlsx.utils.sheet_to_json(wbLookupA.Sheets[wbLookupA.SheetNames[0]]);
-        const sheet2DataB = xlsx.utils.sheet_to_json(wbLookupB.Sheets[wbLookupB.SheetNames[0]]);
+        const dataMain = xlsx.utils.sheet_to_json(wbMain.Sheets[wbMain.SheetNames[0]]);
+        const dataA = xlsx.utils.sheet_to_json(wbLookupA.Sheets[wbLookupA.SheetNames[0]]);
+        const dataB = xlsx.utils.sheet_to_json(wbLookupB.Sheets[wbLookupB.SheetNames[0]]);
 
-        // --- Optimasi VLOOKUP (membuat 2 Map) ---
-        const lookupMapA = new Map();
-        for (const row of sheet2DataA) {
-            // BERSIHKAN KUNCI SAAT MEMBUAT MAP
-            const key = (row[KEY_COLUMN] && typeof row[KEY_COLUMN] === 'string') ? row[KEY_COLUMN].trim() : row[KEY_COLUMN];
-            if (key) lookupMapA.set(key, row);
-        }
-        const lookupMapB = new Map();
-        for (const row of sheet2DataB) {
-            // BERSIHKAN KUNCI SAAT MEMBUAT MAP
-            const key = (row[KEY_COLUMN] && typeof row[KEY_COLUMN] === 'string') ? row[KEY_COLUMN].trim() : row[KEY_COLUMN];
-            if (key) lookupMapB.set(key, row);
-        }
+        console.log(`\n--- MULAI PROSES BARU ---`);
+        console.log(`Total Baris Utama: ${dataMain.length}`);
+        console.log(`Total Baris Ref A: ${dataA.length}`);
 
-        // --- Proses Penggabungan Data (VLOOKUP) ---
+        // 2. Buat MAP dengan Sistem ANTRIAN (Array)
+        // Kita gunakan Object Map agar lebih cepat
+        const mapA = new Map();
+        const mapB = new Map();
+
+        // Fungsi pembantu untuk mengisi Map
+        const populateMap = (dataset, mapTarget, sourceName) => {
+            dataset.forEach(row => {
+                const key = normalizeKey(row[KEY_COLUMN]);
+                if (key) {
+                    if (!mapTarget.has(key)) {
+                        mapTarget.set(key, []); // Inisialisasi Array jika key baru
+                    }
+                    mapTarget.get(key).push(row); // Masukkan data ke antrian
+                }
+            });
+            console.log(`Map ${sourceName} selesai. Contoh Key teratas:`, mapTarget.keys().next().value);
+        };
+
+        populateMap(dataA, mapA, "Ref A");
+        populateMap(dataB, mapB, "Ref B");
+
+        // 3. Proses Pencocokan (Looping File Utama)
         const combinedData = [];
 
-        for (const rowSheet1 of sheet1Data) {
-            // BERSIHKAN KUNCI SAAT MENCARI
-            const lookupValueRaw = rowSheet1[KEY_COLUMN];
-            const lookupValue = (lookupValueRaw && typeof lookupValueRaw === 'string') ? lookupValueRaw.trim() : lookupValueRaw;
+        for (let i = 0; i < dataMain.length; i++) {
+            const rowMain = dataMain[i];
+            const key = normalizeKey(rowMain[KEY_COLUMN]);
             
-            const matchSheetA = lookupMapA.get(lookupValue);
-            const matchSheetB = lookupMapB.get(lookupValue);
+            let matchA = undefined;
+            let matchB = undefined;
 
-            let newRow = {};
-
-            // === Hitung Formula DULU ===
-            let calculatedStatus = "TAGIH";
-            let saldo = (matchSheetA && matchSheetA.SALDO_AKHIR_AFILIASI_NEW !== undefined) 
-                ? matchSheetA.SALDO_AKHIR_AFILIASI_NEW 
-                : (matchSheetB && matchSheetB.SALDO_AKHIR_AFILIASI_NEW);
-            let kewajiban = (matchSheetA && matchSheetA.Total_Kewajiban_New !== undefined) 
-                ? matchSheetA.Total_Kewajiban_New
-                : (matchSheetB && matchSheetB.Total_Kewajiban_New);
-
-            const saldoNum = parseFloat(String(saldo).replace(/,/g, '')) || 0;
-            const kewajibanNum = parseFloat(String(kewajiban).replace(/,/g, '')) || 0;
-
-            if (saldoNum > kewajibanNum) {
-                calculatedStatus = "AMAN";
-            }
-            // =============================
-
-            // === Loop melalui kolom pilihan pengguna ===
-            for (const colInfo of orderedColumns) {
-                const colName = colInfo.column; // colName ini sudah di-trim dari frontend
-
-                if (colInfo.column === 'STATUS' && colInfo.useFormula === true) {
-                    newRow[colName] = calculatedStatus;
-                
-                } else if (colInfo.source === 'main') {
-                    newRow[colName] = rowSheet1[colName];
-                
-                } else if (colInfo.source === 'lookupA') {
-                    if (matchSheetA) {
-                        newRow[colName] = matchSheetA[colName];
-                    } else {
-                        newRow[colName] = "data_tidak_ditemukan_A";
-                    }
-                
-                } else if (colInfo.source === 'lookupB') {
-                    if (matchSheetB) {
-                        newRow[colName] = matchSheetB[colName];
-                    } else {
-                        newRow[colName] = "data_tidak_ditemukan_B";
+            // --- LOGIKA PENGAMBILAN (SHIFT) ---
+            // Cek Map A
+            if (mapA.has(key)) {
+                const queueA = mapA.get(key); // Ambil antrian
+                if (queueA.length > 0) {
+                    matchA = queueA.shift(); // AMBIL yang pertama, lalu HAPUS dari antrian
+                    // Log untuk debug khusus key yang bermasalah
+                    if (key === '10389134685') {
+                        console.log(`[DEBUG] Baris Utama #${i+1}: Mengambil data Ref A. Sisa antrian: ${queueA.length}`);
                     }
                 }
             }
-            
+
+            // Cek Map B
+            if (mapB.has(key)) {
+                const queueB = mapB.get(key);
+                if (queueB.length > 0) {
+                    matchB = queueB.shift();
+                }
+            }
+
+            // --- Penyusunan Baris Baru ---
+            let newRow = {};
+
+            // Logika Status/Formula
+            let calculatedStatus = "TAGIH";
+            let saldo = (matchA?.SALDO_AKHIR_AFILIASI_NEW) ?? (matchB?.SALDO_AKHIR_AFILIASI_NEW) ?? 0;
+            let kewajiban = (matchA?.Total_Kewajiban_New) ?? (matchB?.Total_Kewajiban_New) ?? 0;
+
+            // Bersihkan format angka (hapus koma)
+            const parseNum = (val) => parseFloat(String(val).replace(/,/g, '')) || 0;
+            if (parseNum(saldo) > parseNum(kewajiban)) {
+                calculatedStatus = "AMAN";
+            }
+
+            // Isi Kolom Sesuai Urutan
+            orderedColumns.forEach(colInfo => {
+                const col = colInfo.column;
+                if (col === 'STATUS' && colInfo.useFormula) {
+                    newRow[col] = calculatedStatus;
+                } else if (colInfo.source === 'main') {
+                    newRow[col] = rowMain[col];
+                } else if (colInfo.source === 'lookupA') {
+                    newRow[col] = matchA ? matchA[col] : "TIDAK_ADA_DATA";
+                } else if (colInfo.source === 'lookupB') {
+                    newRow[col] = matchB ? matchB[col] : "TIDAK_ADA_DATA";
+                }
+            });
+
             combinedData.push(newRow);
         }
 
-        // --- Membuat File Excel Baru (Output) ---
-        const newWorkbook = xlsx.utils.book_new();
-        const newWorksheet = xlsx.utils.json_to_sheet(combinedData);
-        xlsx.utils.book_append_sheet(newWorkbook, newWorksheet, 'Hasil_VLOOKUP');
-        const outputBuffer = xlsx.write(newWorkbook, { bookType: 'xlsx', type: 'buffer' });
+        // 4. Buat File Output
+        const newBook = xlsx.utils.book_new();
+        const newSheet = xlsx.utils.json_to_sheet(combinedData);
+        xlsx.utils.book_append_sheet(newBook, newSheet, 'Hasil_VLOOKUP');
+        const buffer = xlsx.write(newBook, { bookType: 'xlsx', type: 'buffer' });
 
-        // --- Mengirim File Hasil ke Pengguna ---
-        res.setHeader('Content-Disposition', 'attachment; filename="Hasil_VLOOKUP.xlsx"');
+        res.setHeader('Content-Disposition', 'attachment; filename="Hasil_VLOOKUP_Antrian.xlsx"');
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.send(outputBuffer);
+        res.send(buffer);
 
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Terjadi error internal saat memproses file: ' + error.message });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
     } finally {
-        // --- PENTING: Hapus file sementara ---
-        try {
-            fs.unlinkSync(fileMainPath);
-            fs.unlinkSync(fileLookupAPath);
-            fs.unlinkSync(fileLookupBPath);
-        } catch(e) { console.error("Gagal hapus file:", e); }
+        // Bersihkan file
+        Object.values(paths).forEach(p => { if (fs.existsSync(p)) fs.unlinkSync(p); });
     }
 });
 
-// 4. Jalankan Server
-app.listen(3000, () => {
-  console.log('Server berjalan di http://localhost:3000');
-  
-  // Perintah ajaib untuk membuka browser otomatis di Windows
-  exec('explorer "http://localhost:3000"'); 
+// Global Error Handler
+app.use((err, req, res, next) => {
+    if (err instanceof multer.MulterError) return res.status(500).json({ error: `Upload Error: ${err.message}` });
+    res.status(500).json({ error: err.message });
+});
+
+app.listen(port, () => {
+    console.log(`Server siap di http://localhost:${port}`);
+    exec(`explorer "http://localhost:${port}"`);
 });
